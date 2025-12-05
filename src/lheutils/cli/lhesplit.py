@@ -22,7 +22,7 @@ def split_lhe_file(
     num_files: int,
     rwgt: bool = True,
     weights: bool = True,
-) -> None:
+) -> tuple[int,str]:
     """
     Split an LHE file into multiple output files.
 
@@ -37,10 +37,8 @@ def split_lhe_file(
     try:
         lhefile = pylhe.LHEFile.fromfile(input_file)
         total_events = pylhe.LHEFile.count_events(input_file)
-        print(f"Read LHE file {input_file} with {total_events} events.")
     except Exception as e:
-        print(f"Error reading input file '{input_file}': {e}", file=sys.stderr)
-        sys.exit(1)
+        return 1, f"Error reading input file '{input_file}': {e}"
 
     # events per file
     events_per_file = total_events // num_files + (
@@ -61,8 +59,7 @@ def split_lhe_file(
         output_filename = f"{Path(output_base).stem}_{i}{Path(output_base).suffix}"
         new_file = pylhe.LHEFile(init=lhefile.init, events=_generator())
         new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
-        print(f"Wrote {output_filename} with ~{events_per_file} events.")
-
+    return 0, f"Split {total_events} events into {num_files} files with base name '{output_base}'."
 
 def main() -> None:
     """Main CLI function."""
@@ -119,13 +116,17 @@ Examples:
         sys.exit(1)
 
     # Split the file
-    split_lhe_file(
+    code, msg = split_lhe_file(
         args.input_file,
         args.output_base,
         args.num_files,
         rwgt=args.rwgt,
         weights=not args.no_weights,
     )
+
+    if code != 0:
+        print(msg, file=sys.stderr)
+        sys.exit(code)
 
 
 if __name__ == "__main__":

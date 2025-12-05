@@ -40,7 +40,7 @@ def merge_lhe_files(
     output_file: str,
     rwgt: bool = True,
     weights: bool = True,
-) -> None:
+) -> tuple[int,str]:
     """
     Merge multiple LHE files into a single output file.
 
@@ -55,8 +55,6 @@ def merge_lhe_files(
     init_sections = []
     total_events = 0
 
-    print(f"Reading {len(input_files)} input files...")
-
     for input_file in input_files:
         try:
             lhefile = pylhe.LHEFile.fromfile(input_file)
@@ -68,22 +66,13 @@ def merge_lhe_files(
             total_events += event_count
 
         except Exception as e:
-            print(f"Error reading input file '{input_file}': {e}", file=sys.stderr)
-            sys.exit(1)
+            return 1, f"Error reading input file '{input_file}': {e}"
 
     # Check that all initialization sections are identical
-    print("Checking initialization section compatibility...")
     if not check_init_compatibility(init_sections):
-        print(
-            "Error: Input files have different initialization sections.",
-            file=sys.stderr,
-        )
-        print(
-            "All files must have identical <init> blocks to be merged.", file=sys.stderr
-        )
-        sys.exit(1)
+        return 1, f"""Error: Input files have different initialization sections.
+        All files must have identical <init> blocks to be merged."""
 
-    print("All initialization sections are compatible.")
 
     # Create merged file with events from all input files
     def merged_events() -> Iterable[pylhe.LHEEvent]:
@@ -95,9 +84,8 @@ def merge_lhe_files(
     merged_file = pylhe.LHEFile(init=lhefiles[0].init, events=merged_events())
 
     # Write the merged file
-    print(f"Writing merged file with {total_events} total events...")
     merged_file.tofile(output_file, rwgt=rwgt, weights=weights)
-    print(f"Successfully wrote merged file: {output_file}")
+    return 0, f"Merged {len(input_files)} files into '{output_file}' with {total_events} total events."
 
 
 def main() -> None:
@@ -160,12 +148,15 @@ Examples:
         sys.exit(1)
 
     # Merge the files
-    merge_lhe_files(
+    code, msg = merge_lhe_files(
         args.input_files,
         args.output_file,
         rwgt=args.rwgt,
         weights=not args.no_weights,
     )
+    if code != 0:
+        print(msg, file=sys.stderr)
+        sys.exit(code)
 
 
 if __name__ == "__main__":

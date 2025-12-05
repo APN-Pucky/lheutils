@@ -74,6 +74,7 @@ lhemerge = "lheutils.cli.lhemerge:main"
 lhestack = "lheutils.cli.lhestack:main"
 lheunstack = "lheutils.cli.lheunstack:main"
 lhe2lhe = "lheutils.cli.lhe2lhe:main"
+lhediff = "lheutils.cli.lhediff:main"
 
 [tool.hatch.version]
 source = "vcs"
