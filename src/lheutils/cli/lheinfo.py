@@ -7,7 +7,6 @@ including number of events, process information, particle combinations, etc.
 """
 
 import argparse
-import json
 import sys
 import warnings
 from collections import Counter
@@ -15,10 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO, Union
 
-import yaml  # type: ignore[import-untyped]
-
 import pylhe
-from pylhe.cli.util import dataclass_with_properties_to_dict
 
 from lheutils.cli.util import create_base_parser
 
@@ -243,8 +239,6 @@ Examples:
   lheinfo file.lhe                      # Analyze single file (plain format)
   cat file.lhe | lheinfo                # Read from stdin
   lheinfo *.lhe                         # Analyze multiple files
-  lheinfo file1.lhe --format=json       # Output results in JSON format
-  lheinfo file1.lhe --format=yaml       # Output results in YAML format
         """,
     )
 
@@ -252,13 +246,6 @@ Examples:
         "files",
         nargs="*",
         help="LHE file(s) to analyze (or read from stdin if not provided)",
-    )
-
-    parser.add_argument(
-        "--format",
-        choices=["plain", "json", "yaml"],
-        default="plain",
-        help="Output format (default: plain)",
     )
 
     args = parser.parse_args()
@@ -284,22 +271,7 @@ Examples:
             sys.exit(1)
 
     summary = get_lhesummary(file_inputs)
-    if args.format == "json":
-        print(
-            json.dumps(
-                dataclass_with_properties_to_dict(summary),
-                indent=2,
-            )
-        )
-    elif args.format == "yaml":
-        print(
-            yaml.dump(
-                dataclass_with_properties_to_dict(summary),
-                sort_keys=False,
-            )
-        )
-    else:
-        print(str(summary))
+    print(str(summary))
 
 
 if __name__ == "__main__":

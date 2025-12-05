@@ -16,9 +16,8 @@ from itertools import zip_longest
 from pathlib import Path
 from typing import Any
 
-from typing_extensions import Self
-
 import pylhe
+from typing_extensions import Self
 
 from lheutils.cli.util import create_base_parser
 
@@ -471,12 +470,10 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhediff file1.lhe file2.lhe                              # Basic comparison (init + event counts)
-  lhediff file1.lhe file2.lhe --detailed                   # Detailed event-by-event comparison
-  lhediff file1.lhe file2.lhe --detailed -n 100            # Compare only first 100 events
-  lhediff file1.lhe file2.lhe --abs-tol 1e-10              # Allow small absolute differences
+  lhediff file1.lhe file2.lhe                                 # Basic comparison (init + event counts)
+  lhediff file1.lhe file2.lhe --abs-tol 1e-10                 # Allow small absolute differences
   lhediff file1.lhe file2.lhe --rel-tol 1e-6 --abs-tol 1e-12  # Use both relative and absolute tolerance
-  lhediff original.lhe merged.lhe --detailed --rel-tol 1e-10  # Check merge with numeric tolerance
+  lhediff original.lhe merged.lhe --rel-tol 1e-10             # Check merge with numeric tolerance
         """,
     )
 
@@ -485,7 +482,7 @@ Examples:
     parser.add_argument("file2", help="Second LHE file to compare")
 
     parser.add_argument(
-        "--abs-tol",
+        "--abs",
         "-a",
         type=float,
         default=1e-6,
@@ -493,7 +490,7 @@ Examples:
     )
 
     parser.add_argument(
-        "--rel-tol",
+        "--rel",
         "-r",
         type=float,
         default=1e-6,
