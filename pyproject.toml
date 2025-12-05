@@ -1,0 +1,171 @@
+[build-system]
+requires = [
+    "hatchling>=1.13.0",
+    "hatch-vcs>=0.3.0",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "lheutils"
+dynamic = ["version"]
+description = "A small package to get structured data out of Les Houches Event files"
+readme = "README.md"
+license = { text = "Apache-2.0" }  # SPDX short identifier
+requires-python = ">=3.9"
+authors = [
+    { name = "Alexander Puck Neuwirth", email = "a_neuw01@unimib.it" },
+]
+keywords = [
+    "lhe",
+    "physics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "pylhe>=1.0.0",
+]
+
+[project.optional-dependencies]
+lint = [
+    "ruff",
+    "mypy>=1.0.0",
+]
+test = [
+    "pydocstyle",
+    "pytest>=6.0",
+    "pytest-benchmark",
+    "pytest-cov>=2.5.1",
+    "scikit-hep-testdata>=0.5.5",
+]
+develop = [
+    "pylhe[lint,test]",
+    "pre-commit",
+    "tbump>=6.7.0",
+]
+docs = [
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-rtd-theme>=0.5.0",
+    "nbsphinx",
+    "jupyter-sphinx",
+    "sphinx-autoapi",
+    "sphinx-autobuild",
+    "sphinx-math-dollar",
+    "pandoc",
+    "myst-nb",
+    "myst-parser",
+    "toml",
+]
+
+[project.urls]
+Homepage = "https://github.com/APN-Pucky/lheutils"
+"Source Code" = "https://github.com/APN-Pucky/lheutils"
+"Issue Tracker" = "https://github.com/APN-Pucky/lheutils/issues"
+"Releases" = "https://github.com/APN-Pucky/lheutils/releases"
+
+[project.scripts]
+lhecheck = "pylhe.cli.lhecheck:main"
+lhefilter = "pylhe.cli.lhefilter:main"
+lheinfo = "pylhe.cli.lheinfo:main"
+lheshow = "pylhe.cli.lheshow:main"
+lhesplit = "pylhe.cli.lhesplit:main"
+lhemerge = "pylhe.cli.lhemerge:main"
+lhestack = "pylhe.cli.lhestack:main"
+lheunstack = "pylhe.cli.lheunstack:main"
+lhe2lhe = "pylhe.cli.lhe2lhe:main"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/pylhe/_version.py"
+
+[tool.hatch.build.targets.sdist]
+# hatchling always includes:
+# pyproject.toml, .gitignore, any README, any LICENSE, AUTHORS
+include = [
+    "/src",
+    "/tests",
+    "/CITATION.cff",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pylhe"]
+
+[tool.mypy]
+warn_unused_configs = true
+warn_unused_ignores = true
+python_version = "3.9"
+files = "src"
+strict = true
+warn_unreachable = true
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+log_level = "INFO"
+xfail_strict = true
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.ruff.lint]
+extend-select = [
+  "B",        # flake8-bugbear
+  "I",        # isort
+  "ARG",      # flake8-unused-arguments
+  "C4",       # flake8-comprehensions
+  "EM",       # flake8-errmsg
+  "ICN",      # flake8-import-conventions
+  "G",        # flake8-logging-format
+  "PGH",      # pygrep-hooks
+  "PIE",      # flake8-pie
+  "PL",       # pylint
+  "PT",       # flake8-pytest-style
+  "RET",      # flake8-return
+  "RUF",      # Ruff-specific
+  "SIM",      # flake8-simplify
+  "UP",       # pyupgrade
+  "YTT",      # flake8-2020
+  "EXE",      # flake8-executable
+  "NPY",      # NumPy specific rules
+  "PD",       # pandas-vet
+  "FURB",     # refurb
+  "PYI",      # flake8-pyi
+]
+ignore = [
+  "PLR09",    # Too many <...>
+  "PLR2004",  # Magic value used in comparison
+  "ISC001",   # Conflicts with formatter
+  "RUF012",   # TODO: mutable class attributes
+  "SIM115",   # TODO: use context manager for opening files
+]
+
+[tool.codespell]
+# https://github.com/codespell-project/codespell/issues/2801
+# Ignore very long base64-like strings
+ignore-regex = '[A-Za-z0-9+/]{100,}'
