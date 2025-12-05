@@ -3,7 +3,7 @@ name: CI/CD
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
   # Run daily at 0:01 UTC
   schedule:
@@ -56,28 +56,3 @@ jobs:
     - name: Test with pytest
       run: |
         pytest -r sx tests/
-
-    - name: Report core project coverage with Codecov
-      if: >-
-        github.event_name != 'schedule' &&
-        matrix.os == 'ubuntu-latest'
-      uses: codecov/codecov-action@v5
-      with:
-        fail_ci_if_error: true
-        files: ./coverage.xml
-        flags: unittests-${{ matrix.python-version }}
-        name: lheutils
-        token: ${{ secrets.CODECOV_TOKEN }}
-
-  docker:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-    - name: Build Docker image
-      run: |
-        docker build . --file docker/Dockerfile --tag lheutils/lheutils:$GITHUB_SHA
-        docker images
