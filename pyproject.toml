@@ -13,7 +13,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }  # SPDX short identifier
 requires-python = ">=3.9"
 authors = [
-    { name = "Alexander Puck Neuwirth", email = "a_neuw01@unimib.it" },
+    { name = "Alexander Puck Neuwirth", email = "alexander.neuwirth@unimib.it" },
 ]
 keywords = [
     "lhe",
@@ -56,20 +56,7 @@ develop = [
     "pre-commit",
     "tbump>=6.7.0",
 ]
-docs = [
-    "sphinx",
-    "sphinx-copybutton",
-    "sphinx-rtd-theme>=0.5.0",
-    "nbsphinx",
-    "jupyter-sphinx",
-    "sphinx-autoapi",
-    "sphinx-autobuild",
-    "sphinx-math-dollar",
-    "pandoc",
-    "myst-nb",
-    "myst-parser",
-    "toml",
-]
+
 
 [project.urls]
 Homepage = "https://github.com/APN-Pucky/lheutils"
