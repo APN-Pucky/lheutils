@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import pylhe
-from typing_extensions import Self
 
 from lheutils.cli.util import create_base_parser
 
@@ -82,7 +81,7 @@ class LHEAccumulatedDiff:
         """Add two LHEAccumulatedDiff objects together."""
         return LHEAccumulatedDiff(ndiff=self.ndiff + other.ndiff)
 
-    def __iadd__(self, other: "LHEAccumulatedDiff") -> Self:
+    def __iadd__(self, other: "LHEAccumulatedDiff") -> "LHEAccumulatedDiff":
         """In-place addition for LHEAccumulatedDiff objects."""
         self.ndiff += other.ndiff
         return self

@@ -17,8 +17,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, TextIO, Union
 
-from typing_extensions import Self
-
 import pylhe
 
 from lheutils.cli.util import create_base_parser
@@ -82,7 +80,7 @@ class LHECheckAccumulatedSummary:
             + other.total_total_momentum_violations,
         )
 
-    def __iadd__(self, other: "LHECheckAccumulatedSummary") -> Self:
+    def __iadd__(self, other: "LHECheckAccumulatedSummary") -> "LHECheckAccumulatedSummary":
         self.total_files_checked += other.total_files_checked
         self.total_events_with_violations += other.total_events_with_violations
         self.total_positive_mass_violations += other.total_positive_mass_violations
