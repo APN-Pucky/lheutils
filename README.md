@@ -1,4 +1,4 @@
-# lheutils v0.0.2
+# lheutils v0.0.3
 
 A collection of utilities for working with LHE files.
 
