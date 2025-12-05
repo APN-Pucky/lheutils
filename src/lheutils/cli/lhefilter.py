@@ -15,6 +15,8 @@ from typing import Optional
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def matches_process_filter(
     event: pylhe.LHEEvent,
@@ -224,7 +226,7 @@ def parse_range_list(value: str) -> list[tuple[int, int]]:
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Filter LHE files based on process ID, particle PDG IDs, and event numbers",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

@@ -14,6 +14,9 @@ from typing import Optional
 
 import pylhe
 
+import lheutils
+from lheutils.cli.util import create_base_parser
+
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
@@ -84,7 +87,7 @@ def convert_lhe_file(
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Convert LHE files with different compression and weight format options",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

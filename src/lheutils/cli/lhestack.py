@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def check_init_consistency(init_files: list[pylhe.LHEInit]) -> bool:
     """
@@ -154,7 +156,7 @@ def stack_lhe_files(
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Stack multiple LHE files into a single file (inverse of lheunstack)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

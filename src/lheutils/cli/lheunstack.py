@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def lhe_unstack(lhefile_path: str) -> list[pylhe.LHEFile]:
     """
@@ -45,7 +47,7 @@ def lhe_unstack(lhefile_path: str) -> list[pylhe.LHEFile]:
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Takes a single LHE file and splits the different processes into separate LHE files",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

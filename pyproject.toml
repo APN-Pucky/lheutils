@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "lheutils"
 dynamic = ["version"]
-description = "A small package to get structured data out of Les Houches Event files"
+description = "Various CLI utilities for handling LHE files"
 readme = "README.md"
 license = { text = "Apache-2.0" }  # SPDX short identifier
 requires-python = ">=3.9"
@@ -78,15 +78,15 @@ Homepage = "https://github.com/APN-Pucky/lheutils"
 "Releases" = "https://github.com/APN-Pucky/lheutils/releases"
 
 [project.scripts]
-lhecheck = "pylhe.cli.lhecheck:main"
-lhefilter = "pylhe.cli.lhefilter:main"
-lheinfo = "pylhe.cli.lheinfo:main"
-lheshow = "pylhe.cli.lheshow:main"
-lhesplit = "pylhe.cli.lhesplit:main"
-lhemerge = "pylhe.cli.lhemerge:main"
-lhestack = "pylhe.cli.lhestack:main"
-lheunstack = "pylhe.cli.lheunstack:main"
-lhe2lhe = "pylhe.cli.lhe2lhe:main"
+lhecheck = "lheutils.cli.lhecheck:main"
+lhefilter = "lheutils.cli.lhefilter:main"
+lheinfo = "lheutils.cli.lheinfo:main"
+lheshow = "lheutils.cli.lheshow:main"
+lhesplit = "lheutils.cli.lhesplit:main"
+lhemerge = "lheutils.cli.lhemerge:main"
+lhestack = "lheutils.cli.lhestack:main"
+lheunstack = "lheutils.cli.lheunstack:main"
+lhe2lhe = "lheutils.cli.lhe2lhe:main"
 
 [tool.hatch.version]
 source = "vcs"
@@ -95,7 +95,7 @@ source = "vcs"
 local_scheme = "no-local-version"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/pylhe/_version.py"
+version-file = "src/lheutils/_version.py"
 
 [tool.hatch.build.targets.sdist]
 # hatchling always includes:
@@ -107,7 +107,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pylhe"]
+packages = ["src/lheutils"]
 
 [tool.mypy]
 warn_unused_configs = true

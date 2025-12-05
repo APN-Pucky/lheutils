@@ -20,6 +20,8 @@ import yaml  # type: ignore[import-untyped]
 import pylhe
 from pylhe.cli.util import dataclass_with_properties_to_dict
 
+from lheutils.cli.util import create_base_parser
+
 
 @dataclass
 class LHEChannel:
@@ -233,7 +235,7 @@ def get_lhesummary(
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Display information about LHE files",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

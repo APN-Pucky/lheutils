@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def split_lhe_file(
     input_file: str,
@@ -64,7 +66,7 @@ def split_lhe_file(
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Split LHE events from input file into multiple output files",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

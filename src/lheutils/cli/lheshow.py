@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def show_event(filepath: str, event_number: int) -> None:
     """Show a specific event from an LHE file.
@@ -74,7 +76,7 @@ def show_init(filepath: str) -> None:
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Display specific events or init block from LHE files",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""

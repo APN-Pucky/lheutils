@@ -21,6 +21,8 @@ from typing_extensions import Self
 
 import pylhe
 
+from lheutils.cli.util import create_base_parser
+
 
 def positive_float(value: str) -> float:
     """Custom argparse type for positive floats."""
@@ -499,7 +501,7 @@ def get_lhechecksummary(
 
 def main() -> None:
     """Main CLI function."""
-    parser = argparse.ArgumentParser(
+    parser = create_base_parser(
         description="Validate LHE files and check momentum conservation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
