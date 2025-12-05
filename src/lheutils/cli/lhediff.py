@@ -539,8 +539,8 @@ Examples:
         init=not args.no_init,
         weights=not args.no_weights,
         events=not args.no_events,
-        abs_tol=args.abs_tol,
-        rel_tol=args.rel_tol,
+        abs_tol=args.abs,
+        rel_tol=args.rel,
     )
 
     lhead = lhefilediff.print()
