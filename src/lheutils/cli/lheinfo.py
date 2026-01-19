@@ -198,7 +198,9 @@ class LHEInfo:
 
 
 # TODO add weight variance
-def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
+def get_lheinfo(
+    filepath_or_fileobj: Union[str, TextIO], channels: bool = False
+) -> LHEInfo:
     # Read LHE file
     if isinstance(filepath_or_fileobj, str):
         lhefile = pylhe.LHEFile.fromfile(filepath_or_fileobj)
@@ -220,28 +222,29 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
     num_negative_weighted_events = 0
     for event in lhefile.events:
         num_events += 1
-
-        initial = []
-        final = []
-
-        for particle in event.particles:
-            if particle.status == -1:  # Incoming particles
-                initial.append(particle.id)
-            elif particle.status == 1:  # Outgoing particles
-                final.append(particle.id)
-
-        # Count initial particles
-        initial_tuple = tuple(sorted(initial))
-
-        # Count final particles
-        final_tuple = tuple(sorted(final))
-
-        # Count initial -> final combinations
-        combination = (event.eventinfo.pid, initial_tuple, final_tuple)
-        initial_final_combinations[combination] += 1
         if event.eventinfo.weight < 0:
             num_negative_weighted_events += 1
-            initial_final_negative_combinations[combination] += 1
+        if channels:
+            initial = []
+            final = []
+
+            for particle in event.particles:
+                if particle.status == -1:  # Incoming particles
+                    initial.append(particle.id)
+                elif particle.status == 1:  # Outgoing particles
+                    final.append(particle.id)
+
+            # Count initial particles
+            initial_tuple = tuple(sorted(initial))
+
+            # Count final particles
+            final_tuple = tuple(sorted(final))
+
+            # Count initial -> final combinations
+            combination = (event.eventinfo.pid, initial_tuple, final_tuple)
+            initial_final_combinations[combination] += 1
+            if event.eventinfo.weight < 0:
+                initial_final_negative_combinations[combination] += 1
 
     return LHEInfo(
         filepath=file_display_name,
@@ -285,6 +288,7 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
 
 def get_lhesummary(
     filepaths_or_fileobjs: list[Union[str, TextIO]],
+    channels: bool = False,
 ) -> LHEAccumulatedInfo:
     lheacc = LHEAccumulatedInfo(
         total_events=0,
@@ -293,7 +297,7 @@ def get_lhesummary(
     )
     # Analyze all files
     for filepath_or_fileobj in filepaths_or_fileobjs:
-        lheinfo = get_lheinfo(filepath_or_fileobj)
+        lheinfo = get_lheinfo(filepath_or_fileobj, channels=channels)
         lheacc += lheinfo.print()
 
     return lheacc
@@ -316,6 +320,12 @@ Examples:
         "files",
         nargs="*",
         help="LHE file(s) to analyze (or read from stdin if not provided)",
+    )
+    parser.add_argument(
+        "--channels",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Do not display channel information (use --no-channels to override)",
     )
 
     args = parser.parse_args()
@@ -340,7 +350,7 @@ Examples:
             print("Error: No valid files found and no stdin data", file=sys.stderr)
             sys.exit(1)
 
-    get_lhesummary(file_inputs).print()
+    get_lhesummary(file_inputs, channels=args.channels).print()
 
 
 if __name__ == "__main__":
