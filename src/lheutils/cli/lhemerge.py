@@ -40,7 +40,7 @@ def merge_lhe_files(
     output_file: str,
     rwgt: bool = True,
     weights: bool = True,
-) -> tuple[int,str]:
+) -> tuple[int, str]:
     """
     Merge multiple LHE files into a single output file.
 
@@ -70,9 +70,11 @@ def merge_lhe_files(
 
     # Check that all initialization sections are identical
     if not check_init_compatibility(init_sections):
-        return 1, f"""Error: Input files have different initialization sections.
-        All files must have identical <init> blocks to be merged."""
-
+        return (
+            1,
+            """Error: Input files have different initialization sections.
+        All files must have identical <init> blocks to be merged.""",
+        )
 
     # Create merged file with events from all input files
     def merged_events() -> Iterable[pylhe.LHEEvent]:
@@ -85,7 +87,10 @@ def merge_lhe_files(
 
     # Write the merged file
     merged_file.tofile(output_file, rwgt=rwgt, weights=weights)
-    return 0, f"Merged {len(input_files)} files into '{output_file}' with {total_events} total events."
+    return (
+        0,
+        f"Merged {len(input_files)} files into '{output_file}' with {total_events} total events.",
+    )
 
 
 def main() -> None:

@@ -2,7 +2,8 @@ import subprocess
 
 import skhep_testdata
 
-path="./src/lheutils/cli/"
+path = "./src/lheutils/cli/"
+
 
 def test_lhecheck_good():
     # run the executable and capture output

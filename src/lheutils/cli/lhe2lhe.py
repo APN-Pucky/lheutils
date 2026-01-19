@@ -14,7 +14,6 @@ from typing import Optional
 
 import pylhe
 
-import lheutils
 from lheutils.cli.util import create_base_parser
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'

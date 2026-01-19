@@ -12,9 +12,10 @@ import warnings
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO, Union
+from typing import Any, TextIO, Union
 
 import pylhe
+from typing_extensions import Self
 
 from lheutils.cli.util import create_base_parser
 
@@ -26,6 +27,26 @@ class LHEChannel:
     incoming_pdgid: list[int]
     outgoing_pdgid: list[int]
     num_events: int
+    num_negative_events: int
+
+
+def merge_channels(channels: list[LHEChannel]) -> list[LHEChannel]:
+    merged: dict[tuple[tuple[int, ...], tuple[int, ...]], LHEChannel] = {}
+    for channel in channels:
+        key = (
+            tuple(sorted(channel.incoming_pdgid)),
+            tuple(sorted(channel.outgoing_pdgid)),
+        )
+        if key not in merged:
+            merged[key] = LHEChannel(
+                incoming_pdgid=channel.incoming_pdgid,
+                outgoing_pdgid=channel.outgoing_pdgid,
+                num_events=0,
+                num_negative_events=0,
+            )
+        merged[key].num_events += channel.num_events
+        merged[key].num_negative_events += channel.num_negative_events
+    return list(merged.values())
 
 
 @dataclass
@@ -39,14 +60,74 @@ class LHEProcess:
 
 
 @dataclass
+class LHEAccumulatedInfo:
+    total_events: int
+    total_negative_weighted_events: int
+    total_channels: list[LHEChannel]
+
+    def __add__(self, other: "LHEAccumulatedInfo") -> "LHEAccumulatedInfo":
+        return LHEAccumulatedInfo(
+            total_events=self.total_events + other.total_events,
+            total_negative_weighted_events=(
+                self.total_negative_weighted_events
+                + other.total_negative_weighted_events
+            ),
+            total_channels=merge_channels(self.total_channels + other.total_channels),
+        )
+
+    def __iadd__(self, other: "LHEAccumulatedInfo") -> Self:
+        self.total_events += other.total_events
+        self.total_negative_weighted_events += other.total_negative_weighted_events
+        self.total_channels = merge_channels(self.total_channels + other.total_channels)
+        return self
+
+    def print(self, *args: Any, **kwargs: Any) -> None:
+        print("=" * 60)
+        ratio = (
+            self.total_negative_weighted_events / self.total_events
+            if self.total_events > 0
+            else 0.0
+        )
+        print(
+            f"Total number of events: {self.total_events} (negative: {ratio:.2%})",
+            *args,
+            **kwargs,
+        )
+        sorted_channels = sorted(
+            self.total_channels, key=lambda ch: ch.num_events, reverse=True
+        )
+        for channel in sorted_channels:
+            percentage = (
+                100 * channel.num_events / self.total_events
+                if self.total_events > 0
+                else 0.0
+            )
+            negative_ratio = (
+                channel.num_negative_events / channel.num_events
+                if channel.num_events > 0
+                else 0.0
+            )
+            print(
+                f"{channel.incoming_pdgid} -> {channel.outgoing_pdgid}: "
+                f"{channel.num_events:,} events ({percentage:.1f}%, "
+                f"negative: {negative_ratio:.2%})",
+                *args,
+                **kwargs,
+            )
+        print("=" * 60)
+
+
+@dataclass
 class LHEInfo:
     """Information about a single LHE file."""
 
     filepath: str
     beamA: int
     energyA: float
+    pdfA: int
     beamB: int
     energyB: float
+    pdfB: int
     weight_groups: dict[str, int]
     num_events: int
     negative_weighted_events: int
@@ -61,21 +142,20 @@ class LHEInfo:
             else 0.0
         )
 
-    def __str__(self) -> str:
-        lines = []
-        lines.append("-" * 60)
-        lines.append(f"File: {self.filepath}")
+    def print(self) -> LHEAccumulatedInfo:
+        print("-" * 60)
+        print(f"File: {self.filepath}")
 
         # Beam information
-        lines.append(f"Beam A: {self.beamA} @ {self.energyA} GeV")
-        lines.append(f"Beam B: {self.beamB} @ {self.energyB} GeV")
+        print(f"Beam A: {self.beamA} (PDF: {self.pdfA}) @ {self.energyA} GeV")
+        print(f"Beam B: {self.beamB} (PDF: {self.pdfB}) @ {self.energyB} GeV")
         # Weight groups
         if self.weight_groups:
-            lines.append("  Weight Groups:")
+            print("  Weight Groups:")
             for name, count in self.weight_groups.items():
-                lines.append(f"    {name}: {count} weights")
+                print(f"    {name}: {count} weights")
         # Number of events
-        lines.append(
+        print(
             f"Number of events: {self.num_events} (negative: {self.negative_weighted_events_ratio:.2%})"
         )
 
@@ -83,7 +163,7 @@ class LHEInfo:
         processes = self.process_info
         if processes:
             for proc in processes:
-                lines.append(
+                print(
                     f"Process {proc.procId} cross-section: ({proc.xSection:.3e} +- {proc.error:.3e}) pb"
                 )
 
@@ -94,15 +174,33 @@ class LHEInfo:
                         channels, key=lambda ch: ch.num_events, reverse=True
                     )
                     for channel in sorted_channels:
-                        percentage = 100 * channel.num_events / self.num_events
-                        lines.append(
-                            f"  {channel.incoming_pdgid} -> {channel.outgoing_pdgid}: {channel.num_events:,} events ({percentage:.1f}%)"
+                        percentage = (
+                            100 * channel.num_events / self.num_events
+                            if self.num_events > 0
+                            else 0.0
+                        )
+                        negative_ratio = (
+                            channel.num_negative_events / channel.num_events
+                            if channel.num_events > 0
+                            else 0.0
+                        )
+                        print(
+                            f"  {channel.incoming_pdgid} -> {channel.outgoing_pdgid}: {channel.num_events:,} events ({percentage:.1f}%, negative: {negative_ratio:.2%})"
                         )
 
-        return "\n".join(lines)
+        return LHEAccumulatedInfo(
+            total_events=self.num_events,
+            total_negative_weighted_events=self.negative_weighted_events,
+            total_channels=merge_channels(
+                [channel for pi in self.process_info for channel in pi.channels]
+            ),
+        )
 
 
-def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
+# TODO add weight variance
+def get_lheinfo(
+    filepath_or_fileobj: Union[str, TextIO], channels: bool = False
+) -> LHEInfo:
     # Read LHE file
     if isinstance(filepath_or_fileobj, str):
         lhefile = pylhe.LHEFile.fromfile(filepath_or_fileobj)
@@ -116,37 +214,46 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
         tuple[int, tuple[int, ...], tuple[int, ...]]
     ] = Counter()
 
+    initial_final_negative_combinations: Counter[
+        tuple[int, tuple[int, ...], tuple[int, ...]]
+    ] = Counter()
+
     num_events = 0
     num_negative_weighted_events = 0
     for event in lhefile.events:
         num_events += 1
         if event.eventinfo.weight < 0:
             num_negative_weighted_events += 1
-        initial = []
-        final = []
+        if channels:
+            initial = []
+            final = []
 
-        for particle in event.particles:
-            if particle.status == -1:  # Incoming particles
-                initial.append(particle.id)
-            elif particle.status == 1:  # Outgoing particles
-                final.append(particle.id)
+            for particle in event.particles:
+                if particle.status == -1:  # Incoming particles
+                    initial.append(particle.id)
+                elif particle.status == 1:  # Outgoing particles
+                    final.append(particle.id)
 
-        # Count initial particles
-        initial_tuple = tuple(sorted(initial))
+            # Count initial particles
+            initial_tuple = tuple(sorted(initial))
 
-        # Count final particles
-        final_tuple = tuple(sorted(final))
+            # Count final particles
+            final_tuple = tuple(sorted(final))
 
-        # Count initial -> final combinations
-        combination = (event.eventinfo.pid, initial_tuple, final_tuple)
-        initial_final_combinations[combination] += 1
+            # Count initial -> final combinations
+            combination = (event.eventinfo.pid, initial_tuple, final_tuple)
+            initial_final_combinations[combination] += 1
+            if event.eventinfo.weight < 0:
+                initial_final_negative_combinations[combination] += 1
 
     return LHEInfo(
         filepath=file_display_name,
         beamA=init_info.beamA,
+        pdfA=init_info.PDFsetA,
         energyA=init_info.energyA,
         beamB=init_info.beamB,
         energyB=init_info.energyB,
+        pdfB=init_info.PDFsetB,
         weight_groups={
             name: len(wg.weights) for name, wg in lhefile.init.weightgroup.items()
         },
@@ -162,6 +269,9 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
                         incoming_pdgid=list(incoming_pdgid),
                         outgoing_pdgid=list(outgoing_pdgid),
                         num_events=count,
+                        num_negative_events=initial_final_negative_combinations.get(
+                            (pid, incoming_pdgid, outgoing_pdgid), 0
+                        ),
                     )
                     for (
                         pid,
@@ -176,57 +286,21 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
     )
 
 
-@dataclass
-class LHESummary:
-    """Summary information from multiple LHE files."""
-
-    files: list[LHEInfo]
-
-    @property
-    def total_events(self) -> int:
-        total_events = 0
-        for lheinfo in self.files:
-            total_events += lheinfo.num_events
-        return total_events
-
-    @property
-    def total_negative_weighted_events(self) -> int:
-        total_negative_weighted_events = 0
-        for lheinfo in self.files:
-            total_negative_weighted_events += lheinfo.negative_weighted_events
-        return total_negative_weighted_events
-
-    @property
-    def negative_weighted_events_ratio(self) -> float:
-        """Ratio of negative weighted events to total events."""
-        return (
-            self.total_negative_weighted_events / self.total_events
-            if self.total_events > 0
-            else 0.0
-        )
-
-    def __str__(self) -> str:
-        lines = []
-        for lheinfo in self.files:
-            lines.append(str(lheinfo))
-        lines.append("=" * 60)
-        lines.append(
-            f"Total number of events: {self.total_events} (negative: {self.negative_weighted_events_ratio:.2%})"
-        )
-        lines.append("=" * 60)
-        return "\n".join(lines)
-
-
 def get_lhesummary(
     filepaths_or_fileobjs: list[Union[str, TextIO]],
-) -> LHESummary:
-    lheinfos = []
+    channels: bool = False,
+) -> LHEAccumulatedInfo:
+    lheacc = LHEAccumulatedInfo(
+        total_events=0,
+        total_negative_weighted_events=0,
+        total_channels=[],
+    )
     # Analyze all files
     for filepath_or_fileobj in filepaths_or_fileobjs:
-        lheinfo = get_lheinfo(filepath_or_fileobj)
-        lheinfos.append(lheinfo)
+        lheinfo = get_lheinfo(filepath_or_fileobj, channels=channels)
+        lheacc += lheinfo.print()
 
-    return LHESummary(files=lheinfos)
+    return lheacc
 
 
 def main() -> None:
@@ -246,6 +320,12 @@ Examples:
         "files",
         nargs="*",
         help="LHE file(s) to analyze (or read from stdin if not provided)",
+    )
+    parser.add_argument(
+        "--channels",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Do not display channel information (use --no-channels to override)",
     )
 
     args = parser.parse_args()
@@ -270,8 +350,7 @@ Examples:
             print("Error: No valid files found and no stdin data", file=sys.stderr)
             sys.exit(1)
 
-    summary = get_lhesummary(file_inputs)
-    print(str(summary))
+    get_lhesummary(file_inputs, channels=args.channels).print()
 
 
 if __name__ == "__main__":
