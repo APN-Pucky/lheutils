@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, TextIO, Union
 
 import pylhe
+from typing_extensions import Self
 
 from lheutils.cli.util import create_base_parser
 
@@ -74,7 +75,7 @@ class LHEAccumulatedInfo:
             total_channels=merge_channels(self.total_channels + other.total_channels),
         )
 
-    def __iadd__(self, other: "LHEAccumulatedInfo") -> "LHEAccumulatedInfo":
+    def __iadd__(self, other: "LHEAccumulatedInfo") -> Self:
         self.total_events += other.total_events
         self.total_negative_weighted_events += other.total_negative_weighted_events
         self.total_channels = merge_channels(self.total_channels + other.total_channels)
@@ -237,11 +238,11 @@ def get_lheinfo(filepath_or_fileobj: Union[str, TextIO]) -> LHEInfo:
     return LHEInfo(
         filepath=file_display_name,
         beamA=init_info.beamA,
-        pdfA=init_info.PDFgroupA + init_info.PDFsetA,
+        pdfA=init_info.PDFsetA,
         energyA=init_info.energyA,
         beamB=init_info.beamB,
         energyB=init_info.energyB,
-        pdfB=init_info.PDFgroupB + init_info.PDFsetB,
+        pdfB=init_info.PDFsetB,
         weight_groups={
             name: len(wg.weights) for name, wg in lhefile.init.weightgroup.items()
         },

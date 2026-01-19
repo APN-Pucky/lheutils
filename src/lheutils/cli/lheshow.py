@@ -8,22 +8,34 @@ from Les Houches Event (LHE) files.
 
 import argparse
 import sys
+import warnings
 from pathlib import Path
+from typing import TextIO, Union
 
 import pylhe
 
 from lheutils.cli.util import create_base_parser
 
 
-def show_event(filepath: str, event_number: int) -> None:
+def show_event(
+    filepath_or_fileobj: Union[str, TextIO],
+    event_number: int,
+    file_inputs_count: int = 1,
+) -> None:
     """Show a specific event from an LHE file.
 
     Args:
-        filepath: Path to the LHE file
+        filepath_or_fileobj: Path to the LHE file or file object
         event_number: Event number to display (1-indexed)
+        file_inputs_count: Number of total files being processed
     """
     try:
-        lhefile = pylhe.LHEFile.fromfile(filepath)
+        if isinstance(filepath_or_fileobj, str):
+            file_display_name = filepath_or_fileobj
+            lhefile = pylhe.LHEFile.fromfile(filepath_or_fileobj)
+        else:
+            file_display_name = "<stdin>"
+            lhefile = pylhe.LHEFile.frombuffer(filepath_or_fileobj)
 
         target_index = event_number
 
@@ -38,39 +50,52 @@ def show_event(filepath: str, event_number: int) -> None:
         i = 0
         for i, event in enumerate(lhefile.events, start=1):
             if i == target_index:
+                if file_inputs_count > 1:
+                    print(f"=== {file_display_name} ===")
                 print(event.tolhe())
                 return
 
         # If we get here, the event number was too high
         print(
-            f"Error: Event {event_number} not found in file. File has {i} events.",
+            f"Error: Event {event_number} not found in {file_display_name}. File has {i} events.",
             file=sys.stderr,
         )
         sys.exit(1)
 
     except FileNotFoundError:
-        print(f"Error: File '{filepath}' not found", file=sys.stderr)
+        print(f"Error: File '{file_display_name}' not found", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Error reading file '{filepath}': {e}", file=sys.stderr)
+        print(f"Error reading file '{file_display_name}': {e}", file=sys.stderr)
         sys.exit(1)
 
 
-def show_init(filepath: str) -> None:
+def show_init(
+    filepath_or_fileobj: Union[str, TextIO], file_inputs_count: int = 1
+) -> None:
     """Show the init block from an LHE file.
 
     Args:
-        filepath: Path to the LHE file
+        filepath_or_fileobj: Path to the LHE file or file object
+        file_inputs_count: Number of total files being processed
     """
     try:
-        lhefile = pylhe.LHEFile.fromfile(filepath)
+        if isinstance(filepath_or_fileobj, str):
+            file_display_name = filepath_or_fileobj
+            lhefile = pylhe.LHEFile.fromfile(filepath_or_fileobj)
+        else:
+            file_display_name = "<stdin>"
+            lhefile = pylhe.LHEFile.frombuffer(filepath_or_fileobj)
+
+        if file_inputs_count > 1:
+            print(f"=== {file_display_name} ===")
         print(lhefile.init.tolhe())
 
     except FileNotFoundError:
-        print(f"Error: File '{filepath}' not found", file=sys.stderr)
+        print(f"Error: File '{file_display_name}' not found", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Error reading file '{filepath}': {e}", file=sys.stderr)
+        print(f"Error reading file '{file_display_name}': {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -87,7 +112,11 @@ Examples:
         """,
     )
 
-    parser.add_argument("file", help="LHE file to read from")
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="LHE file(s) to read from (or read from stdin if not provided)",
+    )
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -97,21 +126,32 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate file path
-    file_path = Path(args.file)
-    if not file_path.exists():
-        print(f"Error: File '{args.file}' does not exist", file=sys.stderr)
-        sys.exit(1)
+    # Check if reading from stdin
+    use_stdin = not args.files and not sys.stdin.isatty()
 
-    if not file_path.is_file():
-        print(f"Error: '{args.file}' is not a file", file=sys.stderr)
-        sys.exit(1)
+    file_inputs: list[Union[str, TextIO]] = []
+    if use_stdin:
+        # Read from stdin
+        file_inputs += [sys.stdin]
+    else:
+        # Expand file paths
+        for pattern in args.files:
+            path = Path(pattern)
+            if path.exists():
+                if path.is_file():
+                    file_inputs.append(str(path))
+                else:
+                    warnings.warn(f"{pattern} is not a file", UserWarning, stacklevel=2)
+        if not file_inputs:
+            print("Error: No valid files found and no stdin data", file=sys.stderr)
+            sys.exit(1)
 
     # Execute the requested action
-    if args.event is not None:
-        show_event(str(file_path), args.event)
-    elif args.init:
-        show_init(str(file_path))
+    for file_input in file_inputs:
+        if args.event is not None:
+            show_event(file_input, args.event, len(file_inputs))
+        elif args.init:
+            show_init(file_input, len(file_inputs))
 
 
 if __name__ == "__main__":
