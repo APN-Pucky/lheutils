@@ -22,7 +22,7 @@ def split_lhe_file(
     num_files: int,
     rwgt: bool = True,
     weights: bool = True,
-) -> tuple[int,str]:
+) -> tuple[int, str]:
     """
     Split an LHE file into multiple output files.
 
@@ -59,7 +59,11 @@ def split_lhe_file(
         output_filename = f"{Path(output_base).stem}_{i}{Path(output_base).suffix}"
         new_file = pylhe.LHEFile(init=lhefile.init, events=_generator())
         new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
-    return 0, f"Split {total_events} events into {num_files} files with base name '{output_base}'."
+    return (
+        0,
+        f"Split {total_events} events into {num_files} files with base name '{output_base}'.",
+    )
+
 
 def main() -> None:
     """Main CLI function."""
