@@ -97,7 +97,11 @@ class LHEAccumulatedInfo:
             self.total_channels, key=lambda ch: ch.num_events, reverse=True
         )
         for channel in sorted_channels:
-            percentage = 100 * channel.num_events / self.total_events
+            percentage = (
+                100 * channel.num_events / self.total_events
+                if self.total_events > 0
+                else 0.0
+            )
             negative_ratio = (
                 channel.num_negative_events / channel.num_events
                 if channel.num_events > 0
@@ -170,7 +174,11 @@ class LHEInfo:
                         channels, key=lambda ch: ch.num_events, reverse=True
                     )
                     for channel in sorted_channels:
-                        percentage = 100 * channel.num_events / self.num_events
+                        percentage = (
+                            100 * channel.num_events / self.num_events
+                            if self.num_events > 0
+                            else 0.0
+                        )
                         negative_ratio = (
                             channel.num_negative_events / channel.num_events
                             if channel.num_events > 0
