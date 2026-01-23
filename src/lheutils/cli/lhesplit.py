@@ -19,7 +19,7 @@ from lheutils.cli.util import create_base_parser
 def split_lhe_file(
     input_file: str,
     output_base: str,
-    num_files: int,
+    num_events: int,
     rwgt: bool = True,
     weights: bool = True,
 ) -> tuple[int, str]:
@@ -29,7 +29,7 @@ def split_lhe_file(
     Args:
         input_file: Path to the input LHE file
         output_base: Base name for output files including .lhe or .lhe.gz extension
-        num_files: Number of output files to create
+        num_events: Number of events per output file
         rwgt: Whether to use rwgt section if present in the input file
         weights: Whether to preserve event weights in output
     """
@@ -37,37 +37,37 @@ def split_lhe_file(
     try:
         if input_file == "-":
             lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
-            # APN TODO this is bad for large inputs
-            events = list(lhefile.events)
-            total_events = len(events)
-            events_iter = iter(events)
+            events_iter = iter(lhefile.events)
         else:
             lhefile = pylhe.LHEFile.fromfile(input_file)
-            total_events = pylhe.LHEFile.count_events(input_file)
             events_iter = iter(lhefile.events)
     except Exception as e:
         source = "stdin" if input_file == "-" else f"file '{input_file}'"
         return 1, f"Error reading input {source}: {e}"
 
     # events per file
-    events_per_file = total_events // num_files + (
-        1 if total_events % num_files != 0 else 0
-    )
+    events_per_file = num_events
+
+    exhausted = False
 
     def _generator() -> Iterable[pylhe.LHEEvent]:
+        nonlocal exhausted
         for _ in range(events_per_file):
             try:
                 yield next(events_iter)
             except StopIteration:
+                exhausted = True
                 break
 
-    for i in range(num_files):
+    i = 0
+    while not exhausted:
+        i += 1
         output_filename = f"{output_base.replace('.', f'_{i}.', 1)}"
         new_file = pylhe.LHEFile(init=lhefile.init, events=_generator())
         new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
     return (
         0,
-        f"Split {total_events} events into {num_files} files with base name '{output_base}'.",
+        f"Split events into {i} files with base name '{output_base}'.",
     )
 
 
@@ -98,7 +98,9 @@ Examples:
     )
 
     parser.add_argument(
-        "num_files", type=int, help="Number of files to split the events between"
+        "num_events",
+        type=int,
+        help="Number of events per output file",
     )
 
     parser.add_argument(
@@ -114,11 +116,6 @@ Examples:
     )
 
     args = parser.parse_args()
-
-    # Validate arguments
-    if args.num_files < 2:
-        print("Error: Number of files must be >= 2", file=sys.stderr)
-        sys.exit(1)
 
     # Check if input file exists (skip validation for stdin)
     if args.input_file != "-":
@@ -137,7 +134,7 @@ Examples:
     code, msg = split_lhe_file(
         args.input_file,
         args.output_base,
-        args.num_files,
+        args.num_events,
         rwgt=args.rwgt,
         weights=not args.no_weights,
     )
