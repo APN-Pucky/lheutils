@@ -78,8 +78,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhesplit input.lhe output.lhe 3           # Split into output_0.lhe, output_1.lhe, output_2.lhe
-  lhesplit events.lhe split.lhe.gz 5        # Split into split_0.lhe.gz, split_1.lhe.gz, ... (compressed)
+  lhesplit input.lhe output.lhe 3           # Split into output_1.lhe, output_2.lhe, output_3.lhe
+  lhesplit events.lhe split.lhe.gz 5        # Split into split_1.lhe.gz, split_2.lhe.gz, ... (compressed)
   cat input.lhe | lhesplit output.lhe 2     # Split from stdin into output_0.lhe, output_1.lhe
   lhesplit output.lhe 4 < input.lhe         # Split from stdin (alternative syntax)
         """,
