@@ -521,9 +521,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-total-momentum",
-        action="store_true",
+        "--total-momentum",
+        action=argparse.BooleanOptionalAction,
         help="Skip total momentum conservation checks",
+        default=True,
     )
     parser.add_argument(
         "--total-momentum-rel",
@@ -539,9 +540,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-onshell",
-        action="store_true",
+        "--onshell",
+        action=argparse.BooleanOptionalAction,
         help="Skip on-shell mass checks",
+        default=True,
     )
     parser.add_argument(
         "--onshell-rel",
@@ -557,9 +559,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-positive-mass",
-        action="store_true",
+        "--positive-mass",
+        action=argparse.BooleanOptionalAction,
         help="Skip positive mass checks",
+        default=True,
     )
     parser.add_argument(
         "--positive-mass-abs",
