@@ -112,7 +112,8 @@ def main() -> None:
     """Main entry point for lhefix CLI."""
     parser = create_base_parser(
         prog="lhefix",
-        description="Fix broken LHE files. Reads from stdin by default or fixes multiple files in place.",
+        description="Fix broken LHE files. Reads from stdin by default or fixes multiple files in place. "
+        "For parallel processing, use GNU parallel: 'parallel -j 8 lhefix ::: *.lhe'.",
     )
 
     parser.add_argument(
