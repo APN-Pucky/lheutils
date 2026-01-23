@@ -116,8 +116,9 @@ Weight formats:
     parser.add_argument(
         "--compress",
         "-c",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         help="Compress the output file (ignored if output filename ends with .gz/.gzip)",
+        default=False,
     )
 
     parser.add_argument(
