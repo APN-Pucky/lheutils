@@ -119,6 +119,11 @@ Examples:
 
     args = parser.parse_args()
 
+    # Validate num_events to avoid invalid or pathological behavior
+    if args.num_events < 1:
+        print("Error: num_events must be at least 1", file=sys.stderr)
+        sys.exit(1)
+
     # Check if input file exists (skip validation for stdin)
     if args.input != "-":
         input_path = Path(args.input)
