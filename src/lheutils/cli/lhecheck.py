@@ -521,9 +521,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-total-momentum",
-        action="store_true",
+        "--total-momentum",
+        action=argparse.BooleanOptionalAction,
         help="Skip total momentum conservation checks",
+        default=True,
     )
     parser.add_argument(
         "--total-momentum-rel",
@@ -539,9 +540,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-onshell",
-        action="store_true",
+        "--onshell",
+        action=argparse.BooleanOptionalAction,
         help="Skip on-shell mass checks",
+        default=True,
     )
     parser.add_argument(
         "--onshell-rel",
@@ -557,9 +559,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-positive-mass",
-        action="store_true",
+        "--positive-mass",
+        action=argparse.BooleanOptionalAction,
         help="Skip positive mass checks",
+        default=True,
     )
     parser.add_argument(
         "--positive-mass-abs",
@@ -594,12 +597,12 @@ Examples:
             sys.exit(1)
 
     lhecargs = LHECheckArgs(
-        positive_mass=not args.no_positive_mass,
+        positive_mass=args.positive_mass,
         positive_mass_abs=args.positive_mass_abs,
-        onshell=not args.no_onshell,
+        onshell=args.onshell,
         onshell_rel=args.onshell_rel,
         onshell_abs=args.onshell_abs,
-        total_momentum=not args.no_total_momentum,
+        total_momentum=args.total_momentum,
         total_momentum_rel=args.total_momentum_rel,
         total_momentum_abs=args.total_momentum_abs,
     )

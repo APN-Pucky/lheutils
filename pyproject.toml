@@ -68,6 +68,7 @@ Homepage = "https://github.com/APN-Pucky/lheutils"
 [project.scripts]
 lhecheck = "lheutils.cli.lhecheck:main"
 lhefilter = "lheutils.cli.lhefilter:main"
+lhefix = "lheutils.cli.lhefix:main"
 lheinfo = "lheutils.cli.lheinfo:main"
 lheshow = "lheutils.cli.lheshow:main"
 lhesplit = "lheutils.cli.lhesplit:main"

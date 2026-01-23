@@ -498,26 +498,23 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-init",
-        "-ni",
-        action="store_true",
-        default=False,
-        help="Don't compare initialization sections (default: False)",
+        "--init",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Don't compare initialization sections (default: True)",
     )
 
     parser.add_argument(
-        "--no-events",
-        "-ne",
-        action="store_true",
-        default=False,
-        help="Don't compare events (default: False)",
+        "--events",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Don't compare events (default: True)",
     )
 
     parser.add_argument(
-        "--no-weights",
-        "-nw",
-        action="store_true",
-        default=False,
+        "--weights",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help="Don't compare weight groups and weights in detail (default: True)",
     )
 
@@ -537,9 +534,9 @@ Examples:
     lhefilediff = diff_lhe_files(
         args.file1,
         args.file2,
-        init=not args.no_init,
-        weights=not args.no_weights,
-        events=not args.no_events,
+        init=args.init,
+        weights=args.weights,
+        events=args.events,
         abs_tol=args.abs,
         rel_tol=args.rel,
     )
