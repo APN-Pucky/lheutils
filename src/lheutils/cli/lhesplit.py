@@ -87,7 +87,7 @@ Examples:
     )
 
     parser.add_argument(
-        "num_files", type=int, help="Number of files to split the events between"
+        "num_files", "-n", type=int, help="Number of files to split the events between"
     )
 
     parser.add_argument(

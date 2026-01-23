@@ -597,12 +597,12 @@ Examples:
             sys.exit(1)
 
     lhecargs = LHECheckArgs(
-        positive_mass=not args.no_positive_mass,
+        positive_mass=args.positive_mass,
         positive_mass_abs=args.positive_mass_abs,
-        onshell=not args.no_onshell,
+        onshell=args.onshell,
         onshell_rel=args.onshell_rel,
         onshell_abs=args.onshell_abs,
-        total_momentum=not args.no_total_momentum,
+        total_momentum=args.total_momentum,
         total_momentum_rel=args.total_momentum_rel,
         total_momentum_abs=args.total_momentum_abs,
     )
