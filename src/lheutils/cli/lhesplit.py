@@ -78,22 +78,24 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhesplit input.lhe output.lhe 3           # Split into output_1.lhe, output_2.lhe, output_3.lhe
-  lhesplit events.lhe split.lhe.gz 5        # Split into split_1.lhe.gz, split_2.lhe.gz, ... (compressed)
-  cat input.lhe | lhesplit output.lhe 2     # Split from stdin into output_0.lhe, output_1.lhe
-  lhesplit output.lhe 4 < input.lhe         # Split from stdin (alternative syntax)
+  lhesplit -i input.lhe -o output.lhe 3           # Split into output_1.lhe, output_2.lhe, output_3.lhe
+  lhesplit -i events.lhe -o split.lhe.gz 5        # Split into split_1.lhe.gz, split_2.lhe.gz, ... (compressed)
+  cat input.lhe | lhesplit -o output.lhe 2     # Split from stdin into output_0.lhe, output_1.lhe
+  lhesplit -o output.lhe 4 < input.lhe         # Split from stdin (alternative syntax)
         """,
     )
 
     parser.add_argument(
-        "input_file",
-        nargs="?",
+        "--input",
+        "-i",
         default="-",
         help="Input LHE file to split (default: stdin)",
     )
 
     parser.add_argument(
-        "output_base",
+        "--output",
+        "-o",
+        required=True,
         help="Base name for output files including .lhe or .lhe.gz extension",
     )
 
@@ -118,22 +120,20 @@ Examples:
     args = parser.parse_args()
 
     # Check if input file exists (skip validation for stdin)
-    if args.input_file != "-":
-        input_path = Path(args.input_file)
+    if args.input != "-":
+        input_path = Path(args.input)
         if not input_path.exists():
-            print(
-                f"Error: Input file '{args.input_file}' does not exist", file=sys.stderr
-            )
+            print(f"Error: Input file '{args.input}' does not exist", file=sys.stderr)
             sys.exit(1)
 
         if not input_path.is_file():
-            print(f"Error: '{args.input_file}' is not a file", file=sys.stderr)
+            print(f"Error: '{args.input}' is not a file", file=sys.stderr)
             sys.exit(1)
 
     # Split the file
     code, msg = split_lhe_file(
-        args.input_file,
-        args.output_base,
+        args.input,
+        args.output,
         args.num_events,
         rwgt=args.rwgt,
         weights=not args.no_weights,
