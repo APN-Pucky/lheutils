@@ -38,6 +38,7 @@ def fix_file_inplace(
         if suffix is None:
             # Replace original file
             output_path = filepath
+            suffix = filepath_obj.suffix
         else:
             # Create new filename with prefix/suffix
             new_name = f"{filepath_obj.stem}{suffix}"
@@ -45,7 +46,9 @@ def fix_file_inplace(
 
         # Create temporary file in same directory as original
         temp_fd, temp_path = tempfile.mkstemp(
-            suffix=".tmp", prefix=filepath_obj.stem + "_", dir=filepath_obj.parent
+            suffix=".tmp" + suffix,
+            prefix=filepath_obj.stem + "_",
+            dir=filepath_obj.parent,
         )
 
         try:

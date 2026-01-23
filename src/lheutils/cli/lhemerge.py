@@ -11,6 +11,7 @@ import argparse
 import sys
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Optional
 
 import pylhe
 
@@ -37,16 +38,16 @@ def check_init_compatibility(init_files: list[pylhe.LHEInit]) -> bool:
 
 def merge_lhe_files(
     input_files: list[str],
-    output_file: str,
+    output_file: Optional[str] = None,
     rwgt: bool = True,
     weights: bool = True,
 ) -> tuple[int, str]:
     """
-    Merge multiple LHE files into a single output file.
+    Merge multiple LHE files into a single output file or stdout.
 
     Args:
         input_files: List of paths to input LHE files
-        output_file: Path to the output LHE file
+        output_file: Path to the output LHE file (None for stdout)
         rwgt: Whether to preserve rwgt weights in output
         weights: Whether to preserve event weights in output
     """
@@ -58,12 +59,9 @@ def merge_lhe_files(
     for input_file in input_files:
         try:
             lhefile = pylhe.LHEFile.fromfile(input_file)
-            event_count = pylhe.LHEFile.count_events(input_file)
-            print(f"  {input_file}: {event_count} events")
 
             lhefiles.append(lhefile)
             init_sections.append(lhefile.init)
-            total_events += event_count
 
         except Exception as e:
             return 1, f"Error reading input file '{input_file}': {e}"
@@ -76,20 +74,31 @@ def merge_lhe_files(
         All files must have identical <init> blocks to be merged.""",
         )
 
+    total_events = 0
+
     # Create merged file with events from all input files
     def merged_events() -> Iterable[pylhe.LHEEvent]:
         """Generator that yields events from all input files in sequence."""
+        nonlocal total_events
         for lhefile in lhefiles:
-            yield from lhefile.events
+            for event in lhefile.events:
+                total_events += 1
+                yield event
 
     # Create output file
     merged_file = pylhe.LHEFile(init=lhefiles[0].init, events=merged_events())
 
     # Write the merged file
-    merged_file.tofile(output_file, rwgt=rwgt, weights=weights)
+    if output_file:
+        merged_file.tofile(output_file, rwgt=rwgt, weights=weights)
+        return (
+            0,
+            f"Merged {len(input_files)} files into '{output_file}' with {total_events} total events.",
+        )
+    merged_file.write(sys.stdout, rwgt=rwgt, weights=weights)
     return (
         0,
-        f"Merged {len(input_files)} files into '{output_file}' with {total_events} total events.",
+        f"Merged {len(input_files)} files to stdout with {total_events} total events.",
     )
 
 
@@ -100,10 +109,11 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhemerge input1.lhe input2.lhe input3.lhe output.lhe         # Merge 3 files into output.lhe
-  lhemerge split_*.lhe merged.lhe.gz                          # Merge all split files (compressed)
-  lhemerge file1.lhe file2.lhe result.lhe --no-weights       # Merge without preserving weights
-  lhemerge a.lhe b.lhe c.lhe combined.lhe --rwgt              # Include rwgt weights
+  lhemerge input1.lhe input2.lhe input3.lhe                   # Merge to stdout
+  lhemerge split_*.lhe --output merged.lhe.gz                 # Merge to compressed file
+  lhemerge file1.lhe file2.lhe --no-weights                  # Merge to stdout without weights
+  lhemerge a.lhe b.lhe c.lhe --output combined.lhe --rwgt    # Merge to file with rwgt weights
+  lhemerge *.lhe | lhefilter --process-id 1                  # Chain with other tools
         """,
     )
 
@@ -114,8 +124,9 @@ Examples:
     )
 
     parser.add_argument(
-        "output_file",
-        help="Output LHE file path (can include .gz extension for compression)",
+        "--output",
+        "-o",
+        help="Output LHE file path (default: stdout, can include .gz extension for compression)",
     )
 
     parser.add_argument(
@@ -155,7 +166,7 @@ Examples:
     # Merge the files
     code, msg = merge_lhe_files(
         args.input_files,
-        args.output_file,
+        args.output,
         rwgt=args.rwgt,
         weights=not args.no_weights,
     )

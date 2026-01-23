@@ -35,18 +35,24 @@ def split_lhe_file(
     """
     # Read the LHE file
     try:
-        lhefile = pylhe.LHEFile.fromfile(input_file)
-        total_events = pylhe.LHEFile.count_events(input_file)
+        if input_file == "-":
+            lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
+            # APN TODO this is bad for large inputs
+            events = list(lhefile.events)
+            total_events = len(events)
+            events_iter = iter(events)
+        else:
+            lhefile = pylhe.LHEFile.fromfile(input_file)
+            total_events = pylhe.LHEFile.count_events(input_file)
+            events_iter = iter(lhefile.events)
     except Exception as e:
-        return 1, f"Error reading input file '{input_file}': {e}"
+        source = "stdin" if input_file == "-" else f"file '{input_file}'"
+        return 1, f"Error reading input {source}: {e}"
 
     # events per file
     events_per_file = total_events // num_files + (
         1 if total_events % num_files != 0 else 0
     )
-
-    # Create iterator from events
-    events_iter = iter(lhefile.events)
 
     def _generator() -> Iterable[pylhe.LHEEvent]:
         for _ in range(events_per_file):
@@ -56,7 +62,7 @@ def split_lhe_file(
                 break
 
     for i in range(num_files):
-        output_filename = f"{Path(output_base).stem}_{i}{Path(output_base).suffix}"
+        output_filename = f"{output_base.replace('.', f'_{i}.', 1)}"
         new_file = pylhe.LHEFile(init=lhefile.init, events=_generator())
         new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
     return (
@@ -74,12 +80,17 @@ def main() -> None:
 Examples:
   lhesplit input.lhe output.lhe 3           # Split into output_0.lhe, output_1.lhe, output_2.lhe
   lhesplit events.lhe split.lhe.gz 5        # Split into split_0.lhe.gz, split_1.lhe.gz, ... (compressed)
-  lhesplit input.lhe events.lhe 2           # Split into events_0.lhe, events_1.lhe
-  lhesplit input.lhe output.lhe 4 --no-weights  # Split without preserving event weights
+  cat input.lhe | lhesplit output.lhe 2     # Split from stdin into output_0.lhe, output_1.lhe
+  lhesplit output.lhe 4 < input.lhe         # Split from stdin (alternative syntax)
         """,
     )
 
-    parser.add_argument("input_file", help="Input LHE file to split")
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        default="-",
+        help="Input LHE file to split (default: stdin)",
+    )
 
     parser.add_argument(
         "output_base",
@@ -87,7 +98,7 @@ Examples:
     )
 
     parser.add_argument(
-        "num_files", "-n", type=int, help="Number of files to split the events between"
+        "num_files", type=int, help="Number of files to split the events between"
     )
 
     parser.add_argument(
@@ -109,15 +120,18 @@ Examples:
         print("Error: Number of files must be >= 2", file=sys.stderr)
         sys.exit(1)
 
-    # Check if input file exists
-    input_path = Path(args.input_file)
-    if not input_path.exists():
-        print(f"Error: Input file '{args.input_file}' does not exist", file=sys.stderr)
-        sys.exit(1)
+    # Check if input file exists (skip validation for stdin)
+    if args.input_file != "-":
+        input_path = Path(args.input_file)
+        if not input_path.exists():
+            print(
+                f"Error: Input file '{args.input_file}' does not exist", file=sys.stderr
+            )
+            sys.exit(1)
 
-    if not input_path.is_file():
-        print(f"Error: '{args.input_file}' is not a file", file=sys.stderr)
-        sys.exit(1)
+        if not input_path.is_file():
+            print(f"Error: '{args.input_file}' is not a file", file=sys.stderr)
+            sys.exit(1)
 
     # Split the file
     code, msg = split_lhe_file(
