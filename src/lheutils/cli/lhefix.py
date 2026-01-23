@@ -125,7 +125,7 @@ def main() -> None:
         "--compress",
         "-c",
         action=argparse.BooleanOptionalAction,
-        help="Compress output (if fixing in place, original files will be replaced with compressed versions).",
+        help="Compress output files.",
         default=False,
     )
 
