@@ -25,9 +25,9 @@ def fix_file_inplace(
     """Fix an LHE file in place using temporary file for safety.
 
     Args:
-        filepath: Path to the LHE file to fix
-        prefix: Prefix to add to the output filename
-        suffix: Suffix to add to the output filename (None means replace original)
+        filepath: Path to the LHE file to fix.
+        compress: Whether to gzip-compress the output file.
+        suffix: Suffix to add to the output filename (None means replace original).
     """
     try:
         # Read the original file
