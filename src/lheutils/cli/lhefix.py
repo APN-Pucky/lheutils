@@ -54,6 +54,10 @@ def fix_file_inplace(
         try:
             # Close the file descriptor since pylhe will open its own
             os.close(temp_fd)
+            # Get original file permissions if replacing the file
+            original_stat = os.stat(filepath)
+            # Set temporary file permissions to match original
+            os.chmod(temp_path, original_stat.st_mode)
 
             # Filter events and write to temporary file
             def _generator() -> Iterable[pylhe.LHEEvent]:
