@@ -177,5 +177,5 @@ $ lhefilter --max-events 1  pwgevents-0001.lhe  | lhe2lhe --weight-format "rwgt"
 Python is slow, but when using all available CPU core the IO speed can become the bottleneck too. To parallelize use GNU `parallel`:
 
 ```console
-parallel -j 8 lhefix ::: *.lhe
+$ parallel -j 8 lhefix ::: *.lhe
 ```
