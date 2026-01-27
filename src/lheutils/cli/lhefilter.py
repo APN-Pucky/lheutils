@@ -33,6 +33,10 @@ def matches_process_filter(
 
 def matches_particle_filter(
     event: pylhe.LHEEvent,
+    incoming_a_pdgid: Optional[int],
+    exclude_incoming_a_pdgid: Optional[int],
+    incoming_b_pdgid: Optional[int],
+    exclude_incoming_b_pdgid: Optional[int],
     incoming_pdgids: Optional[set[int]],
     exclude_incoming_pdgids: Optional[set[int]],
     outgoing_pdgids: Optional[set[int]],
@@ -41,26 +45,49 @@ def matches_particle_filter(
     """Check if event matches particle PDG ID filters."""
     # Get incoming particles (status -1)
     incoming_particles = [p for p in event.particles if p.status == -1]
-    incoming_ids = {p.id for p in incoming_particles}
+    incoming_ids = [p.id for p in incoming_particles]
+    set_incoming_ids = set(incoming_ids)
 
     # Get outgoing particles (status 1)
     outgoing_particles = [p for p in event.particles if p.status == 1]
-    outgoing_ids = {p.id for p in outgoing_particles}
+    outgoing_ids = [p.id for p in outgoing_particles]
+    set_outgoing_ids = set(outgoing_ids)
 
-    # Check incoming particle filters
-    if incoming_pdgids is not None and not incoming_ids.intersection(incoming_pdgids):
+    if incoming_a_pdgid is not None and (
+        len(incoming_ids) < 1 or incoming_a_pdgid != incoming_ids[0]
+    ):
+        return False
+    if exclude_incoming_a_pdgid is not None and (
+        len(incoming_ids) >= 1 and exclude_incoming_a_pdgid == incoming_ids[0]
+    ):
+        return False
+    if incoming_b_pdgid is not None and (
+        len(incoming_ids) < 2 or incoming_b_pdgid != incoming_ids[1]
+    ):
+        return False
+    if exclude_incoming_b_pdgid is not None and (
+        len(incoming_ids) >= 2 and exclude_incoming_b_pdgid == incoming_ids[1]
+    ):
         return False
 
-    if exclude_incoming_pdgids is not None and incoming_ids.intersection(
+    # Check incoming particle filters
+    if incoming_pdgids is not None and not set_incoming_ids.intersection(
+        incoming_pdgids
+    ):
+        return False
+
+    if exclude_incoming_pdgids is not None and set_incoming_ids.intersection(
         exclude_incoming_pdgids
     ):
         return False
 
     # Check outgoing particle filters
-    if outgoing_pdgids is not None and not outgoing_ids.intersection(outgoing_pdgids):
+    if outgoing_pdgids is not None and not set_outgoing_ids.intersection(
+        outgoing_pdgids
+    ):
         return False
 
-    if exclude_outgoing_pdgids is not None and outgoing_ids.intersection(
+    if exclude_outgoing_pdgids is not None and set_outgoing_ids.intersection(
         exclude_outgoing_pdgids
     ):
         return False
@@ -109,6 +136,10 @@ def filter_lhe_file(
     output_file: Optional[str] = None,
     process_ids: Optional[set[int]] = None,
     exclude_process_ids: Optional[set[int]] = None,
+    incoming_a_pdgid: Optional[int] = None,
+    exclude_incoming_a_pdgid: Optional[int] = None,
+    incoming_b_pdgid: Optional[int] = None,
+    exclude_incoming_b_pdgid: Optional[int] = None,
     incoming_pdgids: Optional[set[int]] = None,
     exclude_incoming_pdgids: Optional[set[int]] = None,
     outgoing_pdgids: Optional[set[int]] = None,
@@ -135,6 +166,10 @@ def filter_lhe_file(
                     matches_process_filter(event, process_ids, exclude_process_ids)
                     and matches_particle_filter(
                         event,
+                        incoming_a_pdgid,
+                        exclude_incoming_a_pdgid,
+                        incoming_b_pdgid,
+                        exclude_incoming_b_pdgid,
                         incoming_pdgids,
                         exclude_incoming_pdgids,
                         outgoing_pdgids,
@@ -306,6 +341,34 @@ Note: Multiple filters are combined with AND logic.
         help="Exclude events containing these incoming particles",
     )
 
+    # Incoming particle A filter
+    parser.add_argument(
+        "--incoming-a",
+        type=int,
+        default=None,
+        help="Include events where incoming particle A matches these PDG IDs",
+    )
+    parser.add_argument(
+        "--INCOMING-A",
+        type=int,
+        default=None,
+        help="Exclude events where incoming particle A matches these PDG IDs",
+    )
+
+    # Incoming particle B filter
+    parser.add_argument(
+        "--incoming-b",
+        type=int,
+        default=None,
+        help="Include events where incoming particle B matches these PDG IDs",
+    )
+    parser.add_argument(
+        "--INCOMING-B",
+        type=int,
+        default=None,
+        help="Exclude events where incoming particle B matches these PDG IDs",
+    )
+
     # Outgoing particle filters
     parser.add_argument(
         "--outgoing",
@@ -380,6 +443,10 @@ Note: Multiple filters are combined with AND logic.
         output_file=args.output,
         process_ids=args.process_p,
         exclude_process_ids=args.PROCESS,
+        incoming_a_pdgid=args.incoming_a,
+        exclude_incoming_a_pdgid=args.INCOMING_A,
+        incoming_b_pdgid=args.incoming_b,
+        exclude_incoming_b_pdgid=args.INCOMING_B,
         incoming_pdgids=args.incoming,
         exclude_incoming_pdgids=args.INCOMING,
         outgoing_pdgids=args.outgoing,
