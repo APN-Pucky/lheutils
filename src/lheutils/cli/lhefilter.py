@@ -116,6 +116,7 @@ def filter_lhe_file(
     include_event_ranges: Optional[list[tuple[int, int]]] = None,
     exclude_event_ranges: Optional[list[tuple[int, int]]] = None,
     max_events: Optional[int] = None,
+    negative_weights: bool = False,
 ) -> None:
     """Filter an LHE file based on the given criteria."""
     try:
@@ -142,6 +143,7 @@ def filter_lhe_file(
                     and matches_event_filter(
                         event_index, include_event_ranges, exclude_event_ranges
                     )
+                    and (not negative_weights or event.eventinfo.weight >= 0)
                 ):
                     if max_events is not None and event_count >= max_events:
                         break
@@ -342,6 +344,13 @@ Note: Multiple filters are combined with AND logic.
         help="Maximum number of events to process (default: all events)",
     )
 
+    # Remove negative weights
+    parser.add_argument(
+        "--negative-weights",
+        action="store_true",
+        help="Remove negative weight events from output",
+    )
+
     parser.add_argument(
         "--rwgt",
         action="store_true",
@@ -378,6 +387,7 @@ Note: Multiple filters are combined with AND logic.
         include_event_ranges=args.events,
         exclude_event_ranges=args.EVENTS,
         max_events=args.max_events,
+        negative_weights=args.negative_weights,
     )
 
 

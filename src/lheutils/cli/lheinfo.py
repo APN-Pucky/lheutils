@@ -350,7 +350,9 @@ Examples:
             print("Error: No valid files found and no stdin data", file=sys.stderr)
             sys.exit(1)
 
-    get_lhesummary(file_inputs, channels=args.channels).print()
+    acc = get_lhesummary(file_inputs, channels=args.channels)
+    if len(file_inputs) > 1:
+        acc.print()
 
 
 if __name__ == "__main__":
