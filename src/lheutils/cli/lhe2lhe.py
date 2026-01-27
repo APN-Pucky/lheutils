@@ -9,6 +9,7 @@ to another, with options to change compression and weight format.
 import argparse
 import signal
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Optional
 
@@ -25,6 +26,7 @@ def convert_lhe_file(
     output_file: Optional[str] = None,
     compress: bool = False,
     weight_format: str = "rwgt",
+    append_lhe_weight: Optional[tuple[str, str, str]] = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -33,6 +35,7 @@ def convert_lhe_file(
         output_file: Path to the output LHE file (None for stdout)
         compress: Whether to compress the output file
         weight_format: Weight format to use ('rwgt', 'init-rwgt', or 'none')
+        append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
     """
     try:
         # Read the input file
@@ -54,6 +57,37 @@ def convert_lhe_file(
         else:
             return 1, f"Error: Invalid weight format: {weight_format}"
 
+        if append_lhe_weight is not None:
+            group_name, weight_id, weight_text = append_lhe_weight
+            index = 0
+            for wg in lhefile.init.weightgroup.values():
+                if weight_id in wg.weights:
+                    return (
+                        1,
+                        f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
+                    )
+                for w in wg.weights.values():
+                    index = max(index, w.index)
+            if group_name not in lhefile.init.weightgroup:
+                # create weight group
+                lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
+                    attrib={"name": group_name}, weights={}
+                )
+            if weight_id not in lhefile.init.weightgroup[group_name].weights:
+                lhefile.init.weightgroup[group_name].weights[weight_id] = (
+                    pylhe.LHEWeightInfo(
+                        name=weight_text, attrib={"id": weight_id}, index=index + 1
+                    )
+                )
+
+        # Event loop generator with modifications if needed
+        def _generator() -> Iterable[pylhe.LHEEvent]:
+            for event in lhefile.events:
+                if append_lhe_weight is not None:
+                    _group_name, weight_id, _weight_text = append_lhe_weight
+                    event.weights[weight_id] = event.eventinfo.weight
+                yield event
+
         # Write the output file
         if output_file is None:
             if compress:
@@ -61,13 +95,13 @@ def convert_lhe_file(
                     1,
                     f"Error: Compression option ignored when writing to stdout (use `lhe2lhe {input_file} | gzip`)",
                 )
-            lhefile.write(
+            pylhe.LHEFile(lhefile.init, _generator()).write(
                 sys.stdout,
                 rwgt=rwgt,
                 weights=weights,
             )
         else:
-            lhefile.tofile(
+            pylhe.LHEFile(lhefile.init, _generator()).tofile(
                 output_file,
                 gz=compress,
                 rwgt=rwgt,
@@ -129,6 +163,13 @@ Weight formats:
         help="Weight format to use in output (default: rwgt)",
     )
 
+    parser.add_argument(
+        "--append-lhe-weight",
+        nargs=3,
+        type=str,
+        help="Copies the LHE weight for each event into the explicit weight block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
+    )
+
     args = parser.parse_args()
 
     # Validate input file exists (skip validation for stdin)
@@ -149,6 +190,7 @@ Weight formats:
         args.output,
         args.compress,
         args.weight_format,
+        args.append_lhe_weight,
     )
     if retcode != 0:
         print(message, file=sys.stderr)
