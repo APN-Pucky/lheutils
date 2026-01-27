@@ -115,6 +115,7 @@ def filter_lhe_file(
     exclude_outgoing_pdgids: Optional[set[int]] = None,
     include_event_ranges: Optional[list[tuple[int, int]]] = None,
     exclude_event_ranges: Optional[list[tuple[int, int]]] = None,
+    max_events: Optional[int] = None,
 ) -> None:
     """Filter an LHE file based on the given criteria."""
     try:
@@ -126,6 +127,7 @@ def filter_lhe_file(
 
         # Filter events
         def _generator() -> Iterable[pylhe.LHEEvent]:
+            event_count = 0
             for event_index, event in enumerate(lhefile.events):
                 # Apply all filters
                 if (
@@ -141,7 +143,10 @@ def filter_lhe_file(
                         event_index, include_event_ranges, exclude_event_ranges
                     )
                 ):
+                    if max_events is not None and event_count >= max_events:
+                        break
                     yield event
+                    event_count += 1
 
         # Create filtered LHE file
         filtered_lhefile = pylhe.LHEFile(init=lhefile.init, events=_generator())
@@ -329,6 +334,14 @@ Note: Multiple filters are combined with AND logic.
         help="Exclude events in these ranges (1-indexed). Supports: N (single), N-M (range), N- (from N), -M (up to M)",
     )
 
+    # Number of events to show
+    parser.add_argument(
+        "--max-events",
+        type=int,
+        default=None,
+        help="Maximum number of events to process (default: all events)",
+    )
+
     parser.add_argument(
         "--rwgt",
         action="store_true",
@@ -364,6 +377,7 @@ Note: Multiple filters are combined with AND logic.
         exclude_outgoing_pdgids=args.OUTGOING,
         include_event_ranges=args.events,
         exclude_event_ranges=args.EVENTS,
+        max_events=args.max_events,
     )
 
 
