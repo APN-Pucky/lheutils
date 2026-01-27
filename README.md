@@ -26,6 +26,8 @@ pip install lheutils
 
 ## Examples
 
+More details can be found by running each program with the `--help` option.
+
 ### Filtering
 
 Get the first event with two gluons in the initial state:
@@ -168,4 +170,12 @@ $ lhefilter --max-events 1  pwgevents-0001.lhe  | lhe2lhe --weight-format "rwgt"
 </weights>
 </event>
 </LesHouchesEvents>
+```
+
+### Parallelization
+
+Python is slow, but when using all available CPU core the IO speed can become the bottleneck too. To parallelize use GNU `parallel`:
+
+```console
+parallel -j 8 lhefix ::: *.lhe
 ```
