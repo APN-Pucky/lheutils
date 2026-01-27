@@ -16,6 +16,7 @@ pip install lheutils
 | `lhecheck` | Validate LHE files and check momentum conservation. |
 | `lhediff` | Compare two LHE files and report differences. |
 | `lhefilter` | Filter LHE files based on process ID, particle PDG IDs, and event numbers.  |
+| `lhefix` | Fix common issues in LHE files. |
 | `lheinfo` | Display information about LHE files. |
 | `lhemerge` | Merge LHE files with identical initialization sections (inverse of lhesplit). |
 | `lheshow` | Display specific events or init block from LHE files. |
@@ -85,4 +86,80 @@ Process 10001 cross-section: (1.326e+01 +- 5.974e-01) pb
   [3, 21] -> [3, 21, 25]: 1,126 events (1.4%, negative: 0.00%)
   [-3, 21] -> [-3, 21, 25]: 1,124 events (1.3%, negative: 0.00%)
 ...
+```
+
+Switching formats via `lhe2lhe`, starting from the first event in `pwgevents-0001.lhe`:
+
+```console
+$ lhefilter --max-events 1  pwgevents-0001.lhe
+<LesHouchesEvents version="3.0">
+<init>
+   2212   2212  4.0000000e+03  4.0000000e+03    -1    -1    -1    -1    -4     1
+ 1.3255800e+01  5.9743900e-01  1.0000000e+00  10001
+<initrwgt /></init>
+<event>
+  5  10001  1.9892700000e+01  1.9026000000e+01 -1.0000000000e+00  1.6423900000e-01
+   21  -1   0   0 501 502  0.00000000e+00  0.00000000e+00  9.59159976e+01  9.59159976e+01  0.00000000e+00  0.0000e+00  9.0000e+00
+   -3  -1   0   0   0 511  0.00000000e+00  0.00000000e+00 -2.72494064e+02  2.72494064e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   25   1   1   2   0   0  4.09599828e+01  7.10971103e+00  4.31925771e+01  1.38634178e+02  1.25002274e+02  0.0000e+00  9.0000e+00
+   -3   1   1   2   0 502 -3.20825130e+01  1.03220177e+01 -1.96527493e+02  1.99396307e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   21   1   1   2 501 511 -8.87746976e+00 -1.74317287e+01 -2.32431503e+01  3.03795766e+01  4.76837158e-07  0.0000e+00  9.0000e+00
+</event>
+</LesHouchesEvents>
+```
+
+appending the LHE event weight to the `rwgt` section:
+
+```console
+$ lhefilter --max-events 1  pwgevents-0001.lhe  | lhe2lhe --weight-format "rwgt" --append-lhe-weight default default default
+<LesHouchesEvents version="3.0">
+<init>
+   2212   2212  4.0000000e+03  4.0000000e+03    -1    -1    -1    -1    -4     1
+ 1.3255800e+01  5.9743900e-01  1.0000000e+00  10001
+<initrwgt>
+  <weightgroup name="default">
+    <weight id="default">default</weight>
+  </weightgroup>
+</initrwgt>
+</init>
+<event>
+  5  10001  1.9892700000e+01  1.9026000000e+01 -1.0000000000e+00  1.6423900000e-01
+   21  -1   0   0 501 502  0.00000000e+00  0.00000000e+00  9.59159976e+01  9.59159976e+01  0.00000000e+00  0.0000e+00  9.0000e+00
+   -3  -1   0   0   0 511  0.00000000e+00  0.00000000e+00 -2.72494064e+02  2.72494064e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   25   1   1   2   0   0  4.09599828e+01  7.10971103e+00  4.31925771e+01  1.38634178e+02  1.25002274e+02  0.0000e+00  9.0000e+00
+   -3   1   1   2   0 502 -3.20825130e+01  1.03220177e+01 -1.96527493e+02  1.99396307e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   21   1   1   2 501 511 -8.87746976e+00 -1.74317287e+01 -2.32431503e+01  3.03795766e+01  4.76837158e-07  0.0000e+00  9.0000e+00
+<rwgt>
+ <wgt id='default'> 1.9893e+01</wgt>
+</rwgt>
+</event>
+</LesHouchesEvents>
+```
+
+and finally moving the weight to the `init-rwgt` section:
+
+```console
+$ lhefilter --max-events 1  pwgevents-0001.lhe  | lhe2lhe --weight-format "rwgt" --append-lhe-weight default default default | lhe2lhe --weight-format "init-rwgt"
+<LesHouchesEvents version="3.0">
+<init>
+   2212   2212  4.0000000e+03  4.0000000e+03    -1    -1    -1    -1    -4     1
+ 1.3255800e+01  5.9743900e-01  1.0000000e+00  10001
+<initrwgt>
+  <weightgroup name="default">
+    <weight id="default">default</weight>
+  </weightgroup>
+</initrwgt>
+</init>
+<event>
+  5  10001  1.9892700000e+01  1.9026000000e+01 -1.0000000000e+00  1.6423900000e-01
+   21  -1   0   0 501 502  0.00000000e+00  0.00000000e+00  9.59159976e+01  9.59159976e+01  0.00000000e+00  0.0000e+00  9.0000e+00
+   -3  -1   0   0   0 511  0.00000000e+00  0.00000000e+00 -2.72494064e+02  2.72494064e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   25   1   1   2   0   0  4.09599828e+01  7.10971103e+00  4.31925771e+01  1.38634178e+02  1.25002274e+02  0.0000e+00  9.0000e+00
+   -3   1   1   2   0 502 -3.20825130e+01  1.03220177e+01 -1.96527493e+02  1.99396307e+02  0.00000000e+00  0.0000e+00  9.0000e+00
+   21   1   1   2 501 511 -8.87746976e+00 -1.74317287e+01 -2.32431503e+01  3.03795766e+01  4.76837158e-07  0.0000e+00  9.0000e+00
+<weights>
+ 1.9893e+01
+</weights>
+</event>
+</LesHouchesEvents>
 ```
