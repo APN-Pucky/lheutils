@@ -26,6 +26,8 @@ pip install lheutils
 
 ## Examples
 
+### Filtering
+
 Get the first event with two gluons in the initial state:
 
 ```console
@@ -45,6 +47,8 @@ $ lhefilter  pwgevents-0001.lhe --incoming-a 21 --incoming-b 21 --max-events 1
 </event>
 </LesHouchesEvents>
 ```
+
+### Information
 
 Display general information about an LHE file:
 
@@ -87,6 +91,8 @@ Process 10001 cross-section: (1.326e+01 +- 5.974e-01) pb
   [-3, 21] -> [-3, 21, 25]: 1,124 events (1.3%, negative: 0.00%)
 ...
 ```
+
+### Formatting
 
 Switching formats via `lhe2lhe`, starting from the first event in `pwgevents-0001.lhe`:
 
