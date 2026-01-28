@@ -94,9 +94,9 @@ def convert_hepmc_to_lhe(
     except FileNotFoundError:
         print(f"Error: Input file '{input_display_name}' not found", file=sys.stderr)
         sys.exit(1)
-    # except Exception as e:
-    #    print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
-    #    sys.exit(1)
+    except Exception as e:
+        print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def main() -> None:
