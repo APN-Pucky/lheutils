@@ -63,27 +63,37 @@ def convert_hepmc_to_lhe(
                             pylhe.LHEParticle(
                                 id=p.pid,
                                 status=p.status,
-                                mother1=p.mother1,
-                                mother2=p.mother2,
-                                color1=p.color[0],
-                                color2=p.color[1],
+                                mother1=-1,
+                                mother2=-1,
+                                color1=0,
+                                color2=0,
                                 px=p.momentum.x,
                                 py=p.momentum.y,
                                 pz=p.momentum.z,
                                 e=p.momentum.t,
-                                m=p.mass,
-                                lifetime=p.lifetime,
-                                spin=p.spin,
+                                m=p.momentum.m(),
+                                lifetime=0.0,
+                                spin=9.0,
                             )
                         )
                     yield pylhe.LHEEvent(
                         eventinfo=pylhe.LHEEventInfo(
-                            nparticles=len(particles),
-                            pid=event.event_number,
-                            weight=event.weight,
-                            scale=event.scale,
-                            aqed=event.alpha_qed,
-                            aqcd=event.alpha_qcd,
+                            nparticles=event.attributes["NUP"].astype(int)
+                            if "NUP" in event.attributes
+                            else len(particles),
+                            pid=event.attributes["IDPRUP"].astype(int)
+                            if "IDPRUP" in event.attributes
+                            else 1,
+                            weight=event.weight(),
+                            scale=event.attributes["Scale"].astype(float)
+                            if "Scale" in event.attributes
+                            else -1.0,
+                            aqed=event.attributes["AlphaQED"].astype(float)
+                            if "AlphaQED" in event.attributes
+                            else -1.0,
+                            aqcd=event.attributes["AlphaQCD"].astype(float)
+                            if "AlphaQCD" in event.attributes
+                            else -1.0,
                         ),
                         particles=particles,
                     )
@@ -98,9 +108,9 @@ def convert_hepmc_to_lhe(
     except FileNotFoundError:
         print(f"Error: Input file '{input_display_name}' not found", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:
-        print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
-        sys.exit(1)
+    # except Exception as e:
+    #    print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
+    #    sys.exit(1)
 
 
 def main() -> None:
