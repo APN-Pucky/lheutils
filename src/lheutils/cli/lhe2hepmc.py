@@ -23,6 +23,7 @@ def convert_lhe_to_hepmc(
     Args:
         input_file: Path to the input LHE file or file object (stdin)
         output_file: Path to the output HepMC file or file object (stdout), None for stdout
+        format: HepMC output format (e.g. 'HepMC3', 'HepMC2', or 'HEPEVT')
     """
     try:
         # Determine display name for error messages
