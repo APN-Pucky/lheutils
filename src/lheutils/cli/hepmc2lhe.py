@@ -4,6 +4,7 @@ Convert HepMC files to LHE format.
 """
 
 import argparse
+import signal
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -13,6 +14,9 @@ import pyhepmc  # type: ignore[import-untyped]
 import pylhe
 
 from lheutils.cli.util import create_base_parser
+
+# We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 def convert_hepmc_to_lhe(

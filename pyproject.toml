@@ -37,7 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "pylhe>=1.0.0",
-    "pyhepmc",
+    "pyhepmc>=2.0.0",
     "typing-extensions>=4.0.0",
 ]
 
