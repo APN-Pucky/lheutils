@@ -85,9 +85,7 @@ def convert_hepmc_to_lhe(
                             if "IDPRUP" in event.attributes
                             else 1,
                             weight=event.weight(),
-                            scale=event.attributes["Scale"].astype(float)
-                            if "Scale" in event.attributes
-                            else -1.0,
+                            scale=event.pdf_info.scale,
                             aqed=event.attributes["AlphaQED"].astype(float)
                             if "AlphaQED" in event.attributes
                             else -1.0,

@@ -38,6 +38,8 @@ def convert_lhe_to_hepmc(
             pyhepmc.open(input_file or sys.stdin, "r", format="LHEF") as input,
         ):
             for event in input:
+                # event.remove_vertex(event.vertices[0])
+                # event.remove_vertex(event.vertices[0])
                 output.write(event)
 
     except FileNotFoundError:
