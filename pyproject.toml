@@ -37,6 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "pylhe>=1.0.0",
+    "pyhepmc",
     "typing-extensions>=4.0.0",
 ]
 
@@ -66,6 +67,7 @@ Homepage = "https://github.com/APN-Pucky/lheutils"
 "Releases" = "https://github.com/APN-Pucky/lheutils/releases"
 
 [project.scripts]
+hepmc2lhe = "lheutils.cli.hepmc2lhe:main"
 lhecheck = "lheutils.cli.lhecheck:main"
 lhefilter = "lheutils.cli.lhefilter:main"
 lhefix = "lheutils.cli.lhefix:main"
@@ -76,6 +78,7 @@ lhemerge = "lheutils.cli.lhemerge:main"
 lhestack = "lheutils.cli.lhestack:main"
 lheunstack = "lheutils.cli.lheunstack:main"
 lhe2lhe = "lheutils.cli.lhe2lhe:main"
+lhe2hepmc = "lheutils.cli.lhe2hepmc:main"
 lhediff = "lheutils.cli.lhediff:main"
 
 [tool.hatch.version]
