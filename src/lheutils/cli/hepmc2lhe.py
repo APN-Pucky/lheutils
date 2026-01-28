@@ -18,6 +18,7 @@ from lheutils.cli.util import create_base_parser
 def convert_hepmc_to_lhe(
     input_file: Union[str, TextIO],
     output_file: Union[str, TextIO, None] = None,
+    format: str = "HepMC3",
 ) -> None:
     """Convert HepMC file to LHE format.
 
@@ -49,7 +50,7 @@ def convert_hepmc_to_lhe(
         )
 
         def _generator() -> Iterable[pylhe.LHEEvent]:
-            with pyhepmc.open(input_file) as f:
+            with pyhepmc.open(input_file, format=format) as f:
                 for event in f:
                     particles = []
                     for p in event.particles:
@@ -92,9 +93,9 @@ def convert_hepmc_to_lhe(
     except FileNotFoundError:
         print(f"Error: Input file '{input_display_name}' not found", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:
-        print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
-        sys.exit(1)
+    # except Exception as e:
+    #    print(f"Error converting {input_display_name}: {e}", file=sys.stderr)
+    #    sys.exit(1)
 
 
 def main() -> None:
@@ -123,6 +124,15 @@ Examples:
         "-o",
         type=str,
         help="Output LHE file (write to stdout if not provided)",
+    )
+
+    parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        choices=["HepMC3", "HepMC2", "HEPEVT"],
+        default="HepMC3",
+        help="HepMC format version (default: HepMC3)",
     )
 
     args = parser.parse_args()
@@ -154,7 +164,7 @@ Examples:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Perform the conversion
-    convert_hepmc_to_lhe(input_source, output_destination)
+    convert_hepmc_to_lhe(input_source, output_destination, format=args.format)
 
 
 if __name__ == "__main__":

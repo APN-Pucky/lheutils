@@ -16,6 +16,7 @@ from lheutils.cli.util import create_base_parser
 def convert_lhe_to_hepmc(
     input_file: Union[str, TextIO],
     output_file: Union[str, TextIO, None] = None,
+    format: str = "HepMC3",
 ) -> None:
     """Convert LHE file to HepMC format.
 
@@ -28,10 +29,11 @@ def convert_lhe_to_hepmc(
         input_display_name = input_file if isinstance(input_file, str) else "<stdin>"
 
         with (
-            pyhepmc.open(output_file or sys.stdout, "w") as output,
-            pyhepmc.open(input_file or sys.stdin, "r") as input,
+            pyhepmc.open(output_file or sys.stdout, "w", format=format) as output,
+            pyhepmc.open(input_file or sys.stdin, "r", format="LHEF") as input,
         ):
-            output.write(input.read())
+            for event in input:
+                output.write(event)
 
     except FileNotFoundError:
         print(f"Error: Input file '{input_display_name}' not found", file=sys.stderr)
@@ -69,6 +71,15 @@ Examples:
         help="Output HepMC file (write to stdout if not provided)",
     )
 
+    parser.add_argument(
+        "--format",
+        "-f",
+        type=str,
+        choices=["HepMC3", "HepMC2", "HEPEVT"],
+        default="HepMC3",
+        help="HepMC format version (default: HepMC3)",
+    )
+
     args = parser.parse_args()
 
     # Determine input source
@@ -98,7 +109,7 @@ Examples:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Perform the conversion
-    convert_lhe_to_hepmc(input_source, output_destination)
+    convert_lhe_to_hepmc(input_source, output_destination, format=args.format)
 
 
 if __name__ == "__main__":
