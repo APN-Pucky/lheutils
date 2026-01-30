@@ -39,7 +39,7 @@ def convert_lhe_file(
         weight_format: Weight format to use ('rwgt', 'weights', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
-        add_initrwgt: Optional tuple containing LHE weight group name and weight ID to add to init-rwgt block
+        add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
     """
     try:
         # Read the input file
