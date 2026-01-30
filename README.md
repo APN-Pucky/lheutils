@@ -179,3 +179,9 @@ Python is slow, but when using all available CPU core the IO speed can become th
 ```console
 $ parallel -j 8 lhefix ::: *.lhe
 ```
+
+To pick a specific weight ID
+
+```console
+$ parallel 'lhe2lhe --only-weight-id aMiNLO -i {} -o {}.aminlo.lhe.gz' ::: fixed_*-rwgt.lhe
+```

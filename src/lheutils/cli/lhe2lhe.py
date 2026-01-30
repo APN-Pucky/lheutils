@@ -37,7 +37,6 @@ def convert_lhe_file(
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
         compress: Whether to compress the output file
-        weight_format: Weight format to use ('rwgt', 'weights', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
         add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
@@ -49,26 +48,26 @@ def convert_lhe_file(
         else:
             lhefile = pylhe.LHEFile.fromfile(input_file)
 
-        add_initrwgt = add_initrwgt or []
-        for group_name, weight_id, weight_text in add_initrwgt:
+        if add_initrwgt:
             index = get_max_weight_index(lhefile.init)
-            for wg in lhefile.init.weightgroup.values():
-                if weight_id in wg.weights:
-                    return (
-                        1,
-                        f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
+            for group_name, weight_id, weight_text in add_initrwgt:
+                for wg in lhefile.init.weightgroup.values():
+                    if weight_id in wg.weights:
+                        return (
+                            1,
+                            f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
+                        )
+                if group_name not in lhefile.init.weightgroup:
+                    # create weight group
+                    lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
+                        attrib={"name": group_name}, weights={}
                     )
-            if group_name not in lhefile.init.weightgroup:
-                # create weight group
-                lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
-                    attrib={"name": group_name}, weights={}
-                )
-            if weight_id not in lhefile.init.weightgroup[group_name].weights:
-                lhefile.init.weightgroup[group_name].weights[weight_id] = (
-                    pylhe.LHEWeightInfo(
-                        name=weight_text, attrib={"id": weight_id}, index=index + 1
+                if weight_id not in lhefile.init.weightgroup[group_name].weights:
+                    lhefile.init.weightgroup[group_name].weights[weight_id] = (
+                        pylhe.LHEWeightInfo(
+                            name=weight_text, attrib={"id": weight_id}, index=index + 1
+                        )
                     )
-                )
         if append_lhe_weight is not None:
             group_name, weight_id, weight_text = append_lhe_weight
             index = get_max_weight_index(lhefile.init)
@@ -160,7 +159,7 @@ Examples:
   lhe2lhe -i input.lhe                                    # Convert to stdout
   lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
   lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Compress output
-  lhe2lhe -i input.lhe -o output.lhe --weight-format init-rwgt # Use init-rwgt format
+  lhe2lhe -i input.lhe -o output.lhe --weight-format weights # Use weights format
   lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
   lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Short options
   lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
