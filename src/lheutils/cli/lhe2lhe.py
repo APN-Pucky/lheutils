@@ -125,7 +125,8 @@ def convert_lhe_file(
                     # Replace the central weight with the specified weight and remove others
                     if only_weight_id in event.weights:
                         event.eventinfo.weight = event.weights[only_weight_id]
-                        event.weights = {only_weight_id: event.weights[only_weight_id]}
+                        # After promoting this weight to central, remove all alternate weights
+                        event.weights = {}
                     else:
                         # skip this event
                         continue
