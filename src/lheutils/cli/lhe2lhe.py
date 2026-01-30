@@ -28,7 +28,7 @@ def convert_lhe_file(
     weight_format: str = "rwgt",
     append_lhe_weight: Optional[tuple[str, str, str]] = None,
     only_weight_id: Optional[str] = None,
-    add_initrwgt: Optional[tuple[str, str, str]] = None,
+    add_initrwgt: Optional[list[tuple[str, str, str]]] = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -61,8 +61,8 @@ def convert_lhe_file(
         else:
             return 1, f"Error: Invalid weight format: {weight_format}"
 
-        if add_initrwgt is not None:
-            group_name, weight_id, weight_text = add_initrwgt
+        add_initrwgt = add_initrwgt or []
+        for group_name, weight_id, weight_text in add_initrwgt:
             index = get_max_weight_index(lhefile.init)
             for wg in lhefile.init.weightgroup.values():
                 if weight_id in wg.weights:
@@ -226,6 +226,7 @@ Weight formats:
 
     parser.add_argument(
         "--add-initrwgt",
+        action="append",
         nargs=3,
         type=str,
         help="Adds a new weight to the init-rwgt block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
