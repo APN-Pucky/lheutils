@@ -15,7 +15,7 @@ from typing import Optional
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import create_base_parser, get_max_weight_index
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -61,15 +61,13 @@ def convert_lhe_file(
 
         if append_lhe_weight is not None:
             group_name, weight_id, weight_text = append_lhe_weight
-            index = 0
+            index = get_max_weight_index(lhefile.init)
             for wg in lhefile.init.weightgroup.values():
                 if weight_id in wg.weights:
                     return (
                         1,
                         f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
                     )
-                for w in wg.weights.values():
-                    index = max(index, w.index)
             if group_name not in lhefile.init.weightgroup:
                 # create weight group
                 lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
