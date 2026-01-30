@@ -416,9 +416,9 @@ Note: Multiple filters are combined with AND logic.
 
     parser.add_argument(
         "--weight-format",
-        choices=["none", "rwgt", "weights"],
+        choices=["rwgt", "weights", "none"],
         default="rwgt",
-        help="Output format: 'none', 'rwgt', or 'weights'",
+        help="Weight format to use in output (default: rwgt)",
     )
 
     args = parser.parse_args()

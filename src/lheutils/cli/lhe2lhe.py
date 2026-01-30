@@ -91,7 +91,7 @@ def convert_lhe_file(
             if not found:
                 return (
                     1,
-                    f"Error: Weight ID '{only_weight_id}' not found in init weight groups: {[wg.weights.keys() for wg in lhefile.init.weightgroup.values()]}",
+                    f"Error: Weight ID '{only_weight_id}' not found in init weight groups: {[list(wg.weights.keys()) for wg in lhefile.init.weightgroup.values()]}",
                 )
             # Remove all other weights from init block
             for wg in lhefile.init.weightgroup.values():
