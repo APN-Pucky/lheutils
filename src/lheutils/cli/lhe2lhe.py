@@ -35,7 +35,7 @@ def convert_lhe_file(
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
         compress: Whether to compress the output file
-        weight_format: Weight format to use ('rwgt', 'init-rwgt', or 'none')
+        weight_format: Weight format to use ('rwgt', 'weights', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
     """
