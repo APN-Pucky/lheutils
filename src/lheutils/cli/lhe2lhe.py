@@ -102,17 +102,6 @@ def convert_lhe_file(
                     )
                 )
         if only_weight_id is not None:
-            # Validate that the weight ID exists in the init block
-            found = False
-            for wg in lhefile.init.weightgroup.values():
-                if only_weight_id in wg.weights:
-                    found = True
-                    break
-            if not found:
-                return (
-                    1,
-                    f"Error: Weight ID '{only_weight_id}' not found in init weight groups: {[list(wg.weights.keys()) for wg in lhefile.init.weightgroup.values()]}",
-                )
             # Remove all other weights from init block
             for wg in lhefile.init.weightgroup.values():
                 if only_weight_id in wg.weights:
@@ -147,7 +136,7 @@ def convert_lhe_file(
             if compress:
                 return (
                     1,
-                    f"Error: Compression option ignored when writing to stdout (use `lhe2lhe {input_file} | gzip`)",
+                    f"Error: Compression option ignored when writing to stdout (use `lhe2lhe -i {input_file} | gzip`)",
                 )
             pylhe.LHEFile(lhefile.init, _generator()).write(
                 sys.stdout,
@@ -179,13 +168,13 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhe2lhe input.lhe                                       # Convert to stdout
-  lhe2lhe input.lhe output.lhe                           # Basic conversion
-  lhe2lhe input.lhe output.lhe.gz --compress             # Compress output
-  lhe2lhe input.lhe output.lhe --weight-format init-rwgt # Use init-rwgt format
-  lhe2lhe input.lhe.gz output.lhe --weight-format none   # Remove weights
-  lhe2lhe input.lhe output.lhe.gz -c -w rwgt             # Short options
-  lhe2lhe input.lhe | gzip > output.lhe.gz               # Pipe to compress
+  lhe2lhe -i input.lhe                                    # Convert to stdout
+  lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
+  lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Compress output
+  lhe2lhe -i input.lhe -o output.lhe --weight-format init-rwgt # Use init-rwgt format
+  lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
+  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Short options
+  lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
   cat input.lhe | lhe2lhe                                 # Convert from stdin to stdout
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
@@ -197,9 +186,9 @@ Weight formats:
     )
 
     parser.add_argument(
-        "input", nargs="?", default="-", help="Input LHE file (default: stdin)"
+        "--input", "-i", default="-", help="Input LHE file (default: stdin)"
     )
-    parser.add_argument("output", nargs="?", help="Output LHE file (default: stdout)")
+    parser.add_argument("--output", "-o", help="Output LHE file (default: stdout)")
 
     parser.add_argument(
         "--compress",
