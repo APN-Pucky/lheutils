@@ -25,7 +25,8 @@ def convert_lhe_file(
     input_file: str,
     output_file: Optional[str] = None,
     compress: bool = False,
-    weight_format: str = "rwgt",
+    rwgt: bool = True,
+    weights: bool = False,
     append_lhe_weight: Optional[tuple[str, str, str]] = None,
     only_weight_id: Optional[str] = None,
     add_initrwgt: Optional[list[tuple[str, str, str]]] = None,
@@ -47,19 +48,6 @@ def convert_lhe_file(
             lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
         else:
             lhefile = pylhe.LHEFile.fromfile(input_file)
-
-        # Determine weight options based on format
-        if weight_format == "rwgt":
-            rwgt = True
-            weights = False
-        elif weight_format == "weights":
-            rwgt = False
-            weights = True
-        elif weight_format == "none":
-            rwgt = False
-            weights = False
-        else:
-            return 1, f"Error: Invalid weight format: {weight_format}"
 
         add_initrwgt = add_initrwgt or []
         for group_name, weight_id, weight_text in add_initrwgt:
@@ -247,7 +235,8 @@ Weight formats:
         args.input,
         args.output,
         args.compress,
-        args.weight_format,
+        args.weight_format == "rwgt",
+        args.weight_format == "weights",
         args.append_lhe_weight,
         args.only_weight_id,
         args.add_initrwgt,
