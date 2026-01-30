@@ -21,7 +21,7 @@ def split_lhe_file(
     output_base: str,
     num_events: int,
     rwgt: bool = True,
-    weights: bool = True,
+    weights: bool = False,
 ) -> tuple[int, str]:
     """
     Split an LHE file into multiple output files.
@@ -106,15 +106,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-weights",
-        action="store_true",
-        help="Do not preserve event weights in output files",
-    )
-
-    parser.add_argument(
-        "--rwgt",
-        action="store_true",
-        help="Use rwgt section if present in the input file",
+        "--weight-format",
+        choices=["rwgt", "weights", "none"],
+        default="rwgt",
+        help="Weight format to use in output files (default: rwgt)",
     )
 
     args = parser.parse_args()
@@ -140,8 +135,8 @@ Examples:
         args.input,
         args.output,
         args.num_events,
-        rwgt=args.rwgt,
-        weights=not args.no_weights,
+        rwgt=args.weight_format == "rwgt",
+        weights=args.weight_format == "weights",
     )
 
     if code != 0:

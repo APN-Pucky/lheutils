@@ -415,15 +415,10 @@ Note: Multiple filters are combined with AND logic.
     )
 
     parser.add_argument(
-        "--rwgt",
-        action="store_true",
-        help="Use rwgt section if present in the input file",
-    )
-
-    parser.add_argument(
-        "--no-weights",
-        action="store_true",
-        help="Do not preserve event weights in output file",
+        "--weight-format",
+        choices=["none", "rwgt", "weights"],
+        default="rwgt",
+        help="Output format: 'none', 'rwgt', or 'weights'",
     )
 
     args = parser.parse_args()
@@ -437,8 +432,8 @@ Note: Multiple filters are combined with AND logic.
 
     # Call the filtering function
     filter_lhe_file(
-        rwgt=args.rwgt,
-        weights=not args.no_weights,
+        rwgt=args.weight_format == "rwgt",
+        weights=args.weight_format == "weights",
         input_file=args.input,
         output_file=args.output,
         process_ids=args.process_p,

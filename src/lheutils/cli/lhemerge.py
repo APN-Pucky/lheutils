@@ -40,7 +40,7 @@ def merge_lhe_files(
     input_files: list[str],
     output_file: Optional[str] = None,
     rwgt: bool = True,
-    weights: bool = True,
+    weights: bool = False,
 ) -> tuple[int, str]:
     """
     Merge multiple LHE files into a single output file or stdout.
@@ -130,15 +130,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-weights",
-        action="store_true",
-        help="Do not preserve event weights in output file",
-    )
-
-    parser.add_argument(
-        "--rwgt",
-        action="store_true",
-        help="Use rwgt section if present in the input files",
+        "--weight-format",
+        choices=["rwgt", "weights", "none"],
+        default="rwgt",
+        help="Weight format to use in output (default: rwgt)",
     )
 
     args = parser.parse_args()
@@ -167,8 +162,8 @@ Examples:
     code, msg = merge_lhe_files(
         args.input_files,
         args.output,
-        rwgt=args.rwgt,
-        weights=not args.no_weights,
+        rwgt=args.weight_format == "rwgt",
+        weights=args.weight_format == "weights",
     )
     if code != 0:
         print(msg, file=sys.stderr)

@@ -27,6 +27,7 @@ def convert_lhe_file(
     compress: bool = False,
     weight_format: str = "rwgt",
     append_lhe_weight: Optional[tuple[str, str, str]] = None,
+    only_weight_id: Optional[str] = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -36,6 +37,7 @@ def convert_lhe_file(
         compress: Whether to compress the output file
         weight_format: Weight format to use ('rwgt', 'init-rwgt', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
+        only_weight_id: Optional weight ID to keep; all other weights will be removed
     """
     try:
         # Read the input file
@@ -48,8 +50,8 @@ def convert_lhe_file(
         if weight_format == "rwgt":
             rwgt = True
             weights = False
-        elif weight_format == "init-rwgt":
-            rwgt = True
+        elif weight_format == "weights":
+            rwgt = False
             weights = True
         elif weight_format == "none":
             rwgt = False
@@ -79,6 +81,30 @@ def convert_lhe_file(
                         name=weight_text, attrib={"id": weight_id}, index=index + 1
                     )
                 )
+        if only_weight_id is not None:
+            # Validate that the weight ID exists in the init block
+            found = False
+            for wg in lhefile.init.weightgroup.values():
+                if only_weight_id in wg.weights:
+                    found = True
+                    break
+            if not found:
+                return (
+                    1,
+                    f"Error: Weight ID '{only_weight_id}' not found in init weight groups: {[wg.weights.keys() for wg in lhefile.init.weightgroup.values()]}",
+                )
+            # Remove all other weights from init block
+            for wg in lhefile.init.weightgroup.values():
+                if only_weight_id in wg.weights:
+                    wg.weights = {only_weight_id: wg.weights[only_weight_id]}
+                else:
+                    wg.weights = {}
+            # Remove empty weight groups
+            lhefile.init.weightgroup = {
+                name: wg
+                for name, wg in lhefile.init.weightgroup.items()
+                if len(wg.weights) > 0
+            }
 
         # Event loop generator with modifications if needed
         def _generator() -> Iterable[pylhe.LHEEvent]:
@@ -86,6 +112,14 @@ def convert_lhe_file(
                 if append_lhe_weight is not None:
                     _group_name, weight_id, _weight_text = append_lhe_weight
                     event.weights[weight_id] = event.eventinfo.weight
+                if only_weight_id is not None:
+                    # Replace the central weight with the specified weight and remove others
+                    if only_weight_id in event.weights:
+                        event.eventinfo.weight = event.weights[only_weight_id]
+                        event.weights = {only_weight_id: event.weights[only_weight_id]}
+                    else:
+                        # skip this event
+                        continue
                 yield event
 
         # Write the output file
@@ -158,7 +192,7 @@ Weight formats:
     parser.add_argument(
         "--weight-format",
         "-w",
-        choices=["rwgt", "init-rwgt", "none"],
+        choices=["rwgt", "weights", "none"],
         default="rwgt",
         help="Weight format to use in output (default: rwgt)",
     )
@@ -168,6 +202,12 @@ Weight formats:
         nargs=3,
         type=str,
         help="Copies the LHE weight for each event into the explicit weight block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
+    )
+
+    parser.add_argument(
+        "--only-weight-id",
+        type=str,
+        help="Removes all weights but the specified weight. Also the central xwgtup LHE event weight is replaced.",
     )
 
     args = parser.parse_args()
@@ -191,6 +231,7 @@ Weight formats:
         args.compress,
         args.weight_format,
         args.append_lhe_weight,
+        args.only_weight_id,
     )
     if retcode != 0:
         print(message, file=sys.stderr)
