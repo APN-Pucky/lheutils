@@ -28,6 +28,7 @@ def convert_lhe_file(
     weight_format: str = "rwgt",
     append_lhe_weight: Optional[tuple[str, str, str]] = None,
     only_weight_id: Optional[str] = None,
+    add_initrwgt: Optional[tuple[str, str, str]] = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -38,6 +39,7 @@ def convert_lhe_file(
         weight_format: Weight format to use ('rwgt', 'weights', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
+        add_initrwgt: Optional tuple containing LHE weight group name and weight ID to add to init-rwgt block
     """
     try:
         # Read the input file
@@ -59,6 +61,26 @@ def convert_lhe_file(
         else:
             return 1, f"Error: Invalid weight format: {weight_format}"
 
+        if add_initrwgt is not None:
+            group_name, weight_id, weight_text = add_initrwgt
+            index = get_max_weight_index(lhefile.init)
+            for wg in lhefile.init.weightgroup.values():
+                if weight_id in wg.weights:
+                    return (
+                        1,
+                        f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
+                    )
+            if group_name not in lhefile.init.weightgroup:
+                # create weight group
+                lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
+                    attrib={"name": group_name}, weights={}
+                )
+            if weight_id not in lhefile.init.weightgroup[group_name].weights:
+                lhefile.init.weightgroup[group_name].weights[weight_id] = (
+                    pylhe.LHEWeightInfo(
+                        name=weight_text, attrib={"id": weight_id}, index=index + 1
+                    )
+                )
         if append_lhe_weight is not None:
             group_name, weight_id, weight_text = append_lhe_weight
             index = get_max_weight_index(lhefile.init)
@@ -203,6 +225,13 @@ Weight formats:
     )
 
     parser.add_argument(
+        "--add-initrwgt",
+        nargs=3,
+        type=str,
+        help="Adds a new weight to the init-rwgt block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
+    )
+
+    parser.add_argument(
         "--only-weight-id",
         type=str,
         help="Removes all weights but the specified weight. Also the central xwgtup LHE event weight is replaced.",
@@ -230,6 +259,7 @@ Weight formats:
         args.weight_format,
         args.append_lhe_weight,
         args.only_weight_id,
+        args.add_initrwgt,
     )
     if retcode != 0:
         print(message, file=sys.stderr)
