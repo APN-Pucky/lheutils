@@ -60,7 +60,7 @@ def stack_lhe_files(
     output_file: str,
     new_ids: bool = False,
     rwgt: bool = True,
-    weights: bool = True,
+    weights: bool = False,
 ) -> None:
     """
     Stack multiple LHE files into a single output file.
@@ -180,19 +180,14 @@ Examples:
     )
 
     parser.add_argument(
-        "--no-weights",
-        action="store_true",
-        help="Do not preserve event weights in output file",
-    )
-
-    parser.add_argument(
         "--new-ids", action="store_true", help="Remap process IDs to ensure uniqueness"
     )
 
     parser.add_argument(
-        "--rwgt",
-        action="store_true",
-        help="Use rwgt section if present in the input files",
+        "--weight-format",
+        choices=["rwgt", "weights", "none"],
+        default="rwgt",
+        help="Weight format to use in output (default: rwgt)",
     )
 
     args = parser.parse_args()
@@ -224,8 +219,8 @@ Examples:
         args.input_files,
         args.output_file,
         new_ids=args.new_ids,
-        rwgt=args.rwgt,
-        weights=not args.no_weights,
+        rwgt=args.weight_format == "rwgt",
+        weights=args.weight_format == "weights",
     )
 
 

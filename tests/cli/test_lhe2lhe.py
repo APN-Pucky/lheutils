@@ -8,7 +8,7 @@ path = "./src/lheutils/cli/"
 def test_lhe2lhe_lhefilter_same():
     file = skhep_testdata.data_path("pylhe-testfile-madgraph-2.2.1-Z-ckkwl.lhe.gz")
     # First process: convert file to stdout
-    p1 = subprocess.Popen([f"{path}lhe2lhe.py", file], stdout=subprocess.PIPE)
+    p1 = subprocess.Popen([f"{path}lhe2lhe.py", "-i", file], stdout=subprocess.PIPE)
 
     # Second process: cat (reads from p1)
     p2 = subprocess.Popen(
@@ -22,7 +22,7 @@ def test_lhe2lhe_lhefilter_same():
     output, _ = p2.communicate()
 
     p3 = subprocess.Popen(
-        [f"{path}lhe2lhe.py", file], stdout=subprocess.PIPE, text=True
+        [f"{path}lhe2lhe.py", "-i", file], stdout=subprocess.PIPE, text=True
     )
     out, _ = p3.communicate()
 
@@ -37,7 +37,7 @@ def test_lhe2lhe_lhefilter_same():
 def test_lhe2lhe_lhe2lhe_same():
     file = skhep_testdata.data_path("pylhe-testfile-madgraph-2.2.1-Z-ckkwl.lhe.gz")
     # First process: convert file to stdout
-    p1 = subprocess.Popen([f"{path}lhe2lhe.py", file], stdout=subprocess.PIPE)
+    p1 = subprocess.Popen([f"{path}lhe2lhe.py", "-i", file], stdout=subprocess.PIPE)
 
     # Second process: filter (reads from p1)
     p2 = subprocess.Popen(
