@@ -273,7 +273,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  lhefilter input.lhe -o filtered.lhe --process-p 81,82
+  lhefilter input.lhe -o filtered.lhe --process 81,82
   lhefilter input.lhe --PROCESS 91 --incoming 21 --outgoing 11,-11
   lhefilter input.lhe --events 1,5,10 --outgoing 13,-13
   lhefilter input.lhe --EVENTS 7 --incoming 2,-2
@@ -281,10 +281,10 @@ Examples:
   lhefilter input.lhe --events 10-20 --outgoing 11,-11
   lhefilter input.lhe --events 50- --EVENTS 55-60
   cat input.lhe | lhefilter --outgoing 11,-11
-  zcat input.lhe.gz | lhefilter --process-p 81 --outgoing 13,-13
+  zcat input.lhe.gz | lhefilter --process 81 --outgoing 13,-13
 
 Process ID filters:
-  --process-p ID[,ID...]    Include only events with these process IDs
+  --process ID[,ID...]      Include only events with these process IDs
   --PROCESS/-P ID[,ID...]   Exclude events with these process IDs
 
 Particle PDG ID filters:
@@ -312,7 +312,8 @@ Note: Multiple filters are combined with AND logic.
 
     # Process ID filters
     parser.add_argument(
-        "--process-p",
+        "--process",
+        "-p",
         type=parse_int_list,
         metavar="ID[,ID...]",
         help="Include only events with these process IDs",
@@ -436,7 +437,7 @@ Note: Multiple filters are combined with AND logic.
         weights=args.weight_format == "weights",
         input_file=args.input,
         output_file=args.output,
-        process_ids=args.process_p,
+        process_ids=args.process,
         exclude_process_ids=args.PROCESS,
         incoming_a_pdgid=args.incoming_a,
         exclude_incoming_a_pdgid=args.INCOMING_A,
