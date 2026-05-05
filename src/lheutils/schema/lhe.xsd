@@ -123,6 +123,12 @@
     </xs:simpleContent>
   </xs:complexType>
 
+  <xs:simpleType name="WeightsType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\s*[-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?(\s+[-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)*\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
   <xs:element name="LesHouchesEvents">
     <xs:complexType>
       <xs:sequence>
@@ -145,6 +151,6 @@
   <xs:element name="weight" type="WeightType"/>
   <xs:element name="rwgt" type="RwgtType"/>
   <xs:element name="wgt" type="WgtType"/>
-  <xs:element name="weights" type="xs:string"/>
+  <xs:element name="weights" type="WeightsType"/>
   <xs:element name="scales" type="ScalesType"/>
 </xs:schema>
