@@ -51,7 +51,5 @@ def test_lhevalidate_good(lhe_filename):
     # check return code
     assert (
         result.returncode == 0
-    ), (
-        f"lhevalidate failed for {lhe_filename}: {result.stderr}"
-    )
+    ), f"lhevalidate failed for {lhe_filename}: {result.stderr}"
     assert "✓ File is valid!" in result.stdout
