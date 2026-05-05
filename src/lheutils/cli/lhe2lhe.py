@@ -27,6 +27,7 @@ def convert_lhe_file(
     compress: bool = False,
     weight_format: str = "rwgt",
     append_lhe_weight: Optional[tuple[str, str, str]] = None,
+    copy_weight_to_xwgtup: Optional[str] = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -36,6 +37,7 @@ def convert_lhe_file(
         compress: Whether to compress the output file
         weight_format: Weight format to use ('rwgt', 'init-rwgt', or 'none')
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
+        copy_weight_to_xwgtup: Optional weight ID to copy from explicit weight block to LHE weight (XWGTUP) for each event
     """
     try:
         # Read the input file
@@ -86,6 +88,13 @@ def convert_lhe_file(
                 if append_lhe_weight is not None:
                     _group_name, weight_id, _weight_text = append_lhe_weight
                     event.weights[weight_id] = event.eventinfo.weight
+                if copy_weight_to_xwgtup is not None:
+                    weight_id = copy_weight_to_xwgtup
+                    if weight_id in event.weights.keys():
+                        event.eventinfo.weight = event.weights[weight_id]
+                    else:
+                        err=f"Weight ID '{weight_id}' not found in event weights for event {event.eventinfo.nup}"
+                        raise ValueError(err)
                 yield event
 
         # Write the output file
@@ -164,10 +173,17 @@ Weight formats:
     )
 
     parser.add_argument(
+        "--copy-weight-to-xwgtup",
+        type=str,
+        help="Copies the weight of given ID from the explicit weight block into the LHE weight (XWGTUP) for each event.",
+    )
+
+    parser.add_argument(
         "--append-lhe-weight",
+        "--append-xwgtup",
         nargs=3,
         type=str,
-        help="Copies the LHE weight for each event into the explicit weight block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
+        help="Copies the LHE weight (XWGTUP) for each event into the explicit weight block. First argument is LHE weight group name, second is weight ID, third is the text inside of the weight.",
     )
 
     args = parser.parse_args()
@@ -191,6 +207,7 @@ Weight formats:
         args.compress,
         args.weight_format,
         args.append_lhe_weight,
+        args.copy_weight_to_xwgtup,
     )
     if retcode != 0:
         print(message, file=sys.stderr)
