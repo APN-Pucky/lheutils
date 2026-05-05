@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""
+CLI tool to validate LHE files against XSD schema.
+"""
+
+import argparse
+import sys
+import warnings
+from pathlib import Path
+from typing import TextIO, Union
+
+import pylhe
+from lxml import etree
+
+from lheutils.cli.util import create_base_parser
+
+
+def validate_lhe_file(file_input: Union[str, TextIO], schema_path: str) -> bool:
+    """Validate an LHE file against the XSD schema and pylhe parsing.
+
+    Args:
+        file_input: File path or file object to validate
+        schema_path: Path to the XSD schema file
+
+    Returns:
+        True if valid, False otherwise
+    """
+    try:
+        # Handle different input types
+        if isinstance(file_input, str):
+            # File path - we can read multiple times
+            return _validate_file_path(file_input, schema_path)
+        else:
+            # stdin/file object - read once and validate buffer
+            content = file_input.read()
+            return _validate_buffer(content, schema_path)
+
+    except Exception as e:
+        print(f"  ❌ Error processing file: {e}", file=sys.stderr)
+        return False
+
+
+def _validate_file_path(file_path: str, schema_path: str) -> bool:
+    """Validate a file by path."""
+    # First: XSD schema validation
+    print("  Checking XSD schema compliance...")
+    with open(schema_path, 'r') as schema_file:
+        xsd = etree.XMLSchema(etree.parse(schema_file))
+
+    with open(file_path, 'r') as f:
+        xml = etree.parse(f)
+
+    if not xsd.validate(xml):
+        print("  ❌ XSD validation failed!")
+        print(xsd.error_log)
+        return False
+    else:
+        print("  ✓ XSD validation passed")
+
+    # Second: pylhe parsing and iteration validation
+    print("  Checking LHE format and structure...")
+
+    lhefile = pylhe.LHEFile.fromfile(file_path)
+    return _validate_lhe_structure(lhefile)
+
+
+def _validate_buffer(content: str, schema_path: str) -> bool:
+    """Validate content from buffer/stdin."""
+    # First: XSD schema validation
+    print("  Checking XSD schema compliance...")
+    with open(schema_path, 'r') as schema_file:
+        xsd = etree.XMLSchema(etree.parse(schema_file))
+
+    from io import StringIO
+    xml = etree.parse(StringIO(content))
+
+    if not xsd.validate(xml):
+        print("  ❌ XSD validation failed!")
+        print(xsd.error_log)
+        return False
+    else:
+        print("  ✓ XSD validation passed")
+
+    # Second: pylhe parsing and iteration validation
+    print("  Checking LHE format and structure...")
+
+    lhefile = pylhe.LHEFile.frombuffer(StringIO(content))
+    return _validate_lhe_structure(lhefile)
+
+
+def _validate_lhe_structure(lhefile) -> bool:
+    """Validate LHE file structure using pylhe."""
+    # Check init block exists
+    if lhefile.init is None:
+        print("  ❌ No init block found")
+        return False
+    else:
+        print("  ✓ Init block found")
+
+    # Iterate through events to validate structure
+    event_count = 0
+    try:
+        for event_index, event in enumerate(lhefile.events, start=1):
+            event_count += 1
+            # Basic event validation - check if particles exist
+            if not event.particles:
+                print(f"  ❌ Event {event_index} has no particles")
+                return False
+
+            # Check if we can access basic particle properties
+            for particle in event.particles:
+                _ = particle.pdgid, particle.status, particle.px, particle.py, particle.pz, particle.e
+
+        print(f"  ✓ Successfully parsed {event_count} events")
+        return True
+
+    except Exception as e:
+        print(f"  ❌ Error parsing events: {e}")
+        return False
+
+
+def main() -> None:
+    """Main CLI function."""
+    parser = create_base_parser(
+        description="Validate LHE files against XSD schema and LHE format",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  lhevalidate file.lhe                     # Validate a single file (XSD + LHE format)
+  lhevalidate file1.lhe file2.lhe          # Validate multiple files
+  cat file.lhe | lhevalidate               # Read from stdin
+
+This tool performs two levels of validation:
+  1. XSD schema validation - checks XML structure compliance
+  2. LHE format validation - uses pylhe to parse init/event blocks
+        """,
+    )
+
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="LHE file(s) to validate (or read from stdin if not provided)",
+    )
+
+    args = parser.parse_args()
+
+    # Find schema file
+    schema_path = Path(__file__).parent.parent / "schema" / "lhe.xsd"
+    if not schema_path.exists():
+        print(f"Error: Schema file not found at {schema_path}", file=sys.stderr)
+        sys.exit(1)
+
+    # Check if reading from stdin
+    use_stdin = not args.files and not sys.stdin.isatty()
+
+    file_inputs: list[Union[str, TextIO]] = []
+    if use_stdin:
+        # Read from stdin
+        file_inputs.append(sys.stdin)
+    else:
+        # Expand file paths
+        for pattern in args.files:
+            path = Path(pattern)
+            if path.exists():
+                if path.is_file():
+                    file_inputs.append(str(path))
+                else:
+                    warnings.warn(f"{pattern} is not a file", UserWarning, stacklevel=2)
+            else:
+                warnings.warn(f"{pattern} not found", UserWarning, stacklevel=2)
+
+        if not file_inputs:
+            print("Error: No valid files found and no stdin data", file=sys.stderr)
+            sys.exit(1)
+
+    # Validate all files
+    all_valid = True
+    for file_input in file_inputs:
+        if isinstance(file_input, str):
+            print(f"Validating {file_input}:")
+        else:
+            print("Validating stdin:")
+
+        is_valid = validate_lhe_file(file_input, str(schema_path))
+        if is_valid:
+            print("✓ File is valid!")
+        else:
+            print("❌ File validation failed!")
+        print()  # Add blank line between files
+
+        all_valid = all_valid and is_valid
+
+    # Exit with appropriate code
+    sys.exit(0 if all_valid else 1)
+
+
+if __name__ == "__main__":
+    main()

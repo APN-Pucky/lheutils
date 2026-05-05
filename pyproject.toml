@@ -77,6 +77,7 @@ lhestack = "lheutils.cli.lhestack:main"
 lheunstack = "lheutils.cli.lheunstack:main"
 lhe2lhe = "lheutils.cli.lhe2lhe:main"
 lhediff = "lheutils.cli.lhediff:main"
+lhevalidate = "lheutils.cli.lhevalidate:main"
 
 [tool.hatch.version]
 source = "vcs"

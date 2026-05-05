@@ -23,6 +23,7 @@ pip install lheutils
 | `lhesplit` | Split LHE events from input file into multiple output files. |
 | `lhestack` | Stack multiple LHE files into a single file.  |
 | `lheunstack` | Split a single LHE file by process ID into separate files (inverse of `lhestack`).  |
+| `lhevalidate` | Validate LHE files against the LHE XML schema. |
 
 ## Examples
 

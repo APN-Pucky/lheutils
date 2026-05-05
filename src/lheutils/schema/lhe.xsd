@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:annotation>
+    <xs:documentation>
+      XML Schema for the common core shared by the plain-text LHE examples in
+      src/skhep_testdata/data/pylhe*.lhe.
+
+      This schema keeps the common Les Houches container structure explicit,
+      and also explicitly models generator/reweighting elements that recur
+      across multiple samples: generator, initrwgt, rwgt, weight(s), scales,
+      and the supporting weightgroup/wgt elements.
+
+      Generator-specific extension elements are intentionally not declared
+      here, but they are accepted through lax wildcard validation so files
+      with additional MadGraph, Sherpa, or other extension tags are not
+      rejected.
+    </xs:documentation>
+  </xs:annotation>
+
+  <xs:complexType name="OpenMixedContentType" mixed="true">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:complexType name="GeneratorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="version" type="xs:string"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="InitRwgtType" mixed="true">
+    <xs:sequence>
+      <xs:element ref="weightgroup" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:complexType name="WeightGroupType" mixed="true">
+    <xs:sequence>
+      <xs:element ref="weight" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="combine" type="xs:string"/>
+    <xs:attribute name="name" type="xs:string"/>
+    <xs:attribute name="type" type="xs:string"/>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:complexType name="WeightType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string"/>
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="RwgtType" mixed="true">
+    <xs:sequence>
+      <xs:element ref="wgt" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:complexType name="WgtType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ScalesType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="muf" type="xs:string"/>
+        <xs:attribute name="mur" type="xs:string"/>
+        <xs:attribute name="mups" type="xs:string"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="LesHouchesEvents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" minOccurs="0"/>
+        <xs:element ref="init"/>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header" type="OpenMixedContentType"/>
+  <xs:element name="init" type="OpenMixedContentType"/>
+  <xs:element name="event" type="OpenMixedContentType"/>
+
+  <xs:element name="generator" type="GeneratorType"/>
+  <xs:element name="initrwgt" type="InitRwgtType"/>
+  <xs:element name="weightgroup" type="WeightGroupType"/>
+  <xs:element name="weight" type="WeightType"/>
+  <xs:element name="rwgt" type="RwgtType"/>
+  <xs:element name="wgt" type="WgtType"/>
+  <xs:element name="weights" type="xs:string"/>
+  <xs:element name="scales" type="ScalesType"/>
+</xs:schema>
