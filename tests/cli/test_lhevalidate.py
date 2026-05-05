@@ -14,12 +14,12 @@ LHE_FILES = [
     # POWHEG is excluded for now since it includes trailing random state information which are not XML compatible see
     # https://gitlab.com/POWHEG-BOX/RES/POWHEG-BOX-RES/-/merge_requests/20
     # https://gitlab.com/POWHEG-BOX/V2/POWHEG-BOX-V2/-/merge_requests/18
-    #"pylhe-testfile-powheg-box-v2-directphoton.lhe",
-    #"pylhe-testfile-powheg-box-v2-hvq.lhe",
-    #"pylhe-testfile-powheg-box-v2-trijet.lhe",
-    #"pylhe-testfile-powheg-box-v2-W.lhe",
-    #"pylhe-testfile-powheg-box-v2-Z.lhe",
-    #"pylhe-testfile-powheg-box-v2-Zj.lhe",
+    #   "pylhe-testfile-powheg-box-v2-directphoton.lhe",
+    #   "pylhe-testfile-powheg-box-v2-hvq.lhe",
+    #   "pylhe-testfile-powheg-box-v2-trijet.lhe",
+    #   "pylhe-testfile-powheg-box-v2-W.lhe",
+    #   "pylhe-testfile-powheg-box-v2-Z.lhe",
+    #   "pylhe-testfile-powheg-box-v2-Zj.lhe",
     "pylhe-testfile-pr180.lhe",
     "pylhe-testfile-pr29.lhe",
     "pylhe-testfile-pythia-6.413-ttbar.lhe",
