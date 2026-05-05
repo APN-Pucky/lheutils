@@ -28,23 +28,33 @@
     <xs:anyAttribute processContents="skip"/>
   </xs:complexType>
 
+  <xs:complexType name="HeaderType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="initrwgt"/>
+      <xs:any processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
   <!--
     XSD 1.1 assertions let these mixed-content blocks keep their nested XML
     extension tags while still enforcing the leading plain-text LHE payload
     with a regex.
   -->
   <xs:complexType name="InitBlockType" mixed="true">
-    <xs:sequence>
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
-    </xs:sequence>
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="generator"/>
+      <xs:any processContents="lax"/>
+    </xs:choice>
     <xs:anyAttribute processContents="skip"/>
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)(\n\s*#.*)*(\n\s*([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s*(\n\s*#.*)*)*\s*$')"/>
   </xs:complexType>
 
   <xs:complexType name="EventBlockType" mixed="true">
-    <xs:sequence>
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
-    </xs:sequence>
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="scales"/>
+      <xs:any processContents="lax"/>
+    </xs:choice>
     <xs:anyAttribute processContents="skip"/>
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
   </xs:complexType>
@@ -125,7 +135,7 @@
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="header" type="OpenMixedContentType"/>
+  <xs:element name="header" type="HeaderType"/>
   <xs:element name="init" type="InitBlockType"/>
   <xs:element name="event" type="EventBlockType"/>
 
