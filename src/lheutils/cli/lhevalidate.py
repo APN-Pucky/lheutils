@@ -4,6 +4,8 @@ CLI tool to validate LHE files against XSD schema.
 """
 
 import argparse
+import gzip
+import io
 import re
 import sys
 import warnings
@@ -17,6 +19,37 @@ from lxml import etree
 from lheutils.cli.util import create_base_parser
 
 XSD_NS = {"xs": "http://www.w3.org/2001/XMLSchema"}
+
+
+def _is_gzipped(filepath: Union[str, Path]) -> bool:
+    """Check if a file is gzip compressed by reading its magic number.
+
+    Args:
+        filepath: Path to the file to check
+
+    Returns:
+        True if file is gzip compressed, False otherwise
+    """
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(2)
+        return header == b"\x1f\x8b"  # gzip magic number
+    except OSError:
+        return False
+
+
+def _open_file(filepath: Union[str, Path]) -> io.TextIOWrapper:
+    """Open a file, automatically handling gzip compression.
+
+    Args:
+        filepath: Path to the file to open
+
+    Returns:
+        Text file object
+    """
+    if _is_gzipped(filepath):
+        return gzip.open(filepath, "rt", encoding="utf-8")
+    return open(filepath, encoding="utf-8")
 
 
 def validate_lhe_file(
@@ -60,7 +93,8 @@ def _validate_file_path(
         print("  Checking XSD schema compliance...")
         xsd, schema_doc = _load_schema_resources(schema_path)
 
-        with open(file_path) as f:
+        # Handle both compressed and uncompressed files by magic number
+        with _open_file(file_path) as f:
             xml = etree.parse(f)
 
         if not xsd.validate(xml):
