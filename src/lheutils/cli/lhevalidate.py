@@ -6,6 +6,7 @@ CLI tool to validate LHE files against XSD schema.
 import argparse
 import sys
 import warnings
+from io import StringIO
 from pathlib import Path
 from typing import TextIO, Union
 
@@ -30,10 +31,9 @@ def validate_lhe_file(file_input: Union[str, TextIO], schema_path: str) -> bool:
         if isinstance(file_input, str):
             # File path - we can read multiple times
             return _validate_file_path(file_input, schema_path)
-        else:
-            # stdin/file object - read once and validate buffer
-            content = file_input.read()
-            return _validate_buffer(content, schema_path)
+        # stdin/file object - read once and validate buffer
+        content = file_input.read()
+        return _validate_buffer(content, schema_path)
 
     except Exception as e:
         print(f"  ❌ Error processing file: {e}", file=sys.stderr)
@@ -44,18 +44,17 @@ def _validate_file_path(file_path: str, schema_path: str) -> bool:
     """Validate a file by path."""
     # First: XSD schema validation
     print("  Checking XSD schema compliance...")
-    with open(schema_path, 'r') as schema_file:
+    with open(schema_path) as schema_file:
         xsd = etree.XMLSchema(etree.parse(schema_file))
 
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         xml = etree.parse(f)
 
     if not xsd.validate(xml):
         print("  ❌ XSD validation failed!")
         print(xsd.error_log)
         return False
-    else:
-        print("  ✓ XSD validation passed")
+    print("  ✓ XSD validation passed")
 
     # Second: pylhe parsing and iteration validation
     print("  Checking LHE format and structure...")
@@ -68,18 +67,16 @@ def _validate_buffer(content: str, schema_path: str) -> bool:
     """Validate content from buffer/stdin."""
     # First: XSD schema validation
     print("  Checking XSD schema compliance...")
-    with open(schema_path, 'r') as schema_file:
+    with open(schema_path) as schema_file:
         xsd = etree.XMLSchema(etree.parse(schema_file))
 
-    from io import StringIO
     xml = etree.parse(StringIO(content))
 
     if not xsd.validate(xml):
         print("  ❌ XSD validation failed!")
         print(xsd.error_log)
         return False
-    else:
-        print("  ✓ XSD validation passed")
+    print("  ✓ XSD validation passed")
 
     # Second: pylhe parsing and iteration validation
     print("  Checking LHE format and structure...")
@@ -88,15 +85,8 @@ def _validate_buffer(content: str, schema_path: str) -> bool:
     return _validate_lhe_structure(lhefile)
 
 
-def _validate_lhe_structure(lhefile) -> bool:
+def _validate_lhe_structure(lhefile: pylhe.LHEFile) -> bool:
     """Validate LHE file structure using pylhe."""
-    # Check init block exists
-    if lhefile.init is None:
-        print("  ❌ No init block found")
-        return False
-    else:
-        print("  ✓ Init block found")
-
     # Iterate through events to validate structure
     event_count = 0
     try:
@@ -109,7 +99,14 @@ def _validate_lhe_structure(lhefile) -> bool:
 
             # Check if we can access basic particle properties
             for particle in event.particles:
-                _ = particle.pdgid, particle.status, particle.px, particle.py, particle.pz, particle.e
+                _ = (
+                    particle.id,
+                    particle.status,
+                    particle.px,
+                    particle.py,
+                    particle.pz,
+                    particle.e,
+                )
 
         print(f"  ✓ Successfully parsed {event_count} events")
         return True
