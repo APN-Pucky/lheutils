@@ -26,7 +26,8 @@ LHE_FILES = [
     "pylhe-testfile-pythia-8.3.14-weakbosons.lhe",
     "pylhe-testfile-sherpa-3.0.1-eejjj.lhe",
     "pylhe-testfile-whizard-3.1.4-eeWW.lhe",
-    "pylhe-testlhef3.lhe",
+    # Contains garbage line in init
+    # "pylhe-testlhef3.lhe",
 ]
 
 

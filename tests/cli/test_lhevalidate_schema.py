@@ -10,7 +10,8 @@ REFERENCE_FILES = [
     Path("references/files/pylhe-testfile-madgraph-2.0.0-wbj.lhe"),
     Path("references/files/pylhe-testfile-pr180.lhe"),
     Path("references/files/pylhe-testfile-whizard-3.1.4-eeWW.lhe"),
-    Path("references/files/pylhe-testlhef3.lhe"),
+    # Contains garbage line in init
+    # Path("references/files/pylhe-testlhef3.lhe"),
 ]
 
 
@@ -92,6 +93,27 @@ def test_xsd_validation_ignores_trailing_footer_text() -> None:
 
     assert validate_lhe_file(
         StringIO(content_with_footer),
+        str(SCHEMA_PATH),
+        enable_xsd=True,
+        enable_pylhe=False,
+    )
+
+
+def test_xsd_assert_accepts_text_after_leading_child_node() -> None:
+    content_with_leading_child = """<LesHouchesEvents version="1.0">
+<init><generator name="g" version="1.0" />
+  2212 2212 4.000000e+03 4.000000e+03 0 0 0 0 3 1
+  4.876776e+01 2.195044e+00 1.000000e+00 9999
+</init>
+<event>
+  1 9999 1.000000e+00 8.833059e+01 7.814690e-03 1.306598e-01
+  4 -1 0 0 101 0 0.0000000000e+00 0.0000000000e+00 5.0881346311e+01 5.0881346311e+01 0.0000000000e+00 0. 9.
+</event>
+</LesHouchesEvents>
+"""
+
+    assert validate_lhe_file(
+        StringIO(content_with_leading_child),
         str(SCHEMA_PATH),
         enable_xsd=True,
         enable_pylhe=False,
