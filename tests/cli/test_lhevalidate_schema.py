@@ -75,3 +75,25 @@ this is not a valid event block
     stdout = capsys.readouterr().out
     assert "Checking init/event text patterns..." in stdout
     assert "event text validation failed" in stdout
+
+
+def test_xsd_validation_ignores_trailing_footer_text() -> None:
+    content_with_footer = """<LesHouchesEvents version="1.0">
+<init>
+  2212 2212 4.000000e+03 4.000000e+03 0 0 0 0 3 1
+  4.876776e+01 2.195044e+00 1.000000e+00 9999
+</init>
+<event>
+  1 9999 1.000000e+00 8.833059e+01 7.814690e-03 1.306598e-01
+  4 -1 0 0 101 0 0.0000000000e+00 0.0000000000e+00 5.0881346311e+01 5.0881346311e+01 0.0000000000e+00 0. 9.
+</event>
+</LesHouchesEvents>
+ #Random number generator exit values: 1 2 0
+"""
+
+    assert validate_lhe_file(
+        StringIO(content_with_footer),
+        str(SCHEMA_PATH),
+        enable_xsd=True,
+        enable_pylhe=False,
+    )

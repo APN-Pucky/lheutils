@@ -95,7 +95,8 @@ def _validate_file_path(
 
         # Handle both compressed and uncompressed files by magic number
         with _open_file(file_path) as f:
-            xml = etree.parse(f)
+            xml_payload = _extract_xml_payload(f.read())
+        xml = etree.parse(StringIO(xml_payload))
 
         if not xsd.validate(xml):
             print("  ❌ XSD validation failed!")
@@ -122,7 +123,7 @@ def _validate_buffer(
         print("  Checking XSD schema compliance...")
         xsd, schema_doc = _load_schema_resources(schema_path)
 
-        xml = etree.parse(StringIO(content))
+        xml = etree.parse(StringIO(_extract_xml_payload(content)))
 
         if not xsd.validate(xml):
             print("  ❌ XSD validation failed!")
@@ -168,6 +169,20 @@ def _get_text_pattern(
 def _normalize_block_text(text: str) -> str:
     """Normalize line endings before regex validation."""
     return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _extract_xml_payload(content: str) -> str:
+    """Trim non-XML footer text that may follow the closing root tag.
+
+    Some LHE files, notably POWHEG samples, append plain-text footer lines
+    after ``</LesHouchesEvents>``. Those lines are not part of the XML
+    document, so we exclude them before XSD parsing.
+    """
+    closing_tag = "</LesHouchesEvents>"
+    end_index = content.rfind(closing_tag)
+    if end_index == -1:
+        return content
+    return content[: end_index + len(closing_tag)]
 
 
 def _validate_mixed_block_text(
