@@ -18,11 +18,12 @@ pip install lheutils
 | `lhefilter` | Filter LHE files based on process ID, particle PDG IDs, and event numbers.  |
 | `lhefix` | Fix common issues in LHE files. |
 | `lheinfo` | Display information about LHE files. |
-| `lhemerge` | Merge LHE files with identical initialization sections (inverse of lhesplit). |
+| `lhemerge` | Merge LHE files with identical initialization sections (inverse of `lhesplit`). |
 | `lheshow` | Display specific events or init block from LHE files. |
 | `lhesplit` | Split LHE events from input file into multiple output files. |
 | `lhestack` | Stack multiple LHE files into a single file.  |
-| `lheunstack` | Split a single LHE file by process ID into separate files (inverse of lhestack).  |
+| `lheunstack` | Split a single LHE file by process ID into separate files (inverse of `lhestack`).  |
+| `lhevalidate` | Validate LHE files against the LHE XML schema. |
 
 ## Examples
 

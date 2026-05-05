@@ -11,7 +11,7 @@ dynamic = ["version"]
 description = "Various CLI utilities for handling LHE files"
 readme = "README.md"
 license = { text = "Apache-2.0" }  # SPDX short identifier
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Alexander Puck Neuwirth", email = "alexander.neuwirth@unimib.it" },
 ]
@@ -36,6 +36,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
+    "lxml",
+    "xmlschema",
     "pylhe>=1.0.0",
     "typing-extensions>=4.0.0",
 ]
@@ -77,6 +79,7 @@ lhestack = "lheutils.cli.lhestack:main"
 lheunstack = "lheutils.cli.lheunstack:main"
 lhe2lhe = "lheutils.cli.lhe2lhe:main"
 lhediff = "lheutils.cli.lhediff:main"
+lhevalidate = "lheutils.cli.lhevalidate:main"
 
 [tool.hatch.version]
 source = "vcs"
