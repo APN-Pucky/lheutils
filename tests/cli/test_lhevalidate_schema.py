@@ -37,7 +37,6 @@ def test_validate_lhe_file_honors_disabled_checks(
     )
     stdout = capsys.readouterr().out
     assert "Checking XSD schema compliance..." in stdout
-    assert "Checking init/event text patterns..." in stdout
     assert "Checking LHE format and structure..." not in stdout
 
     assert validate_lhe_file(
@@ -48,7 +47,6 @@ def test_validate_lhe_file_honors_disabled_checks(
     )
     stdout = capsys.readouterr().out
     assert "Checking XSD schema compliance..." not in stdout
-    assert "Checking init/event text patterns..." not in stdout
     assert "Checking LHE format and structure..." in stdout
 
 
@@ -73,8 +71,9 @@ this is not a valid event block
         enable_pylhe=False,
     )
     stdout = capsys.readouterr().out
-    assert "Checking init/event text patterns..." in stdout
-    assert "event text validation failed" in stdout
+    assert "XSD validation failed!" in stdout
+    assert "Path: /LesHouchesEvents/event" in stdout
+    assert "Reason: assertion test is false" in stdout
 
 
 def test_xsd_validation_ignores_trailing_footer_text() -> None:

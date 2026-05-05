@@ -6,22 +6,19 @@ CLI tool to validate LHE files against XSD schema.
 import argparse
 import gzip
 import io
-import re
 import sys
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import TextIO, Union
+from typing import TextIO
 
 import pylhe
-from lxml import etree
+import xmlschema
 
 from lheutils.cli.util import create_base_parser
 
-XSD_NS = {"xs": "http://www.w3.org/2001/XMLSchema"}
 
-
-def _is_gzipped(filepath: Union[str, Path]) -> bool:
+def _is_gzipped(filepath: str | Path) -> bool:
     """Check if a file is gzip compressed by reading its magic number.
 
     Args:
@@ -38,7 +35,7 @@ def _is_gzipped(filepath: Union[str, Path]) -> bool:
         return False
 
 
-def _open_file(filepath: Union[str, Path]) -> io.TextIOWrapper:
+def _open_file(filepath: str | Path) -> io.TextIOWrapper:
     """Open a file, automatically handling gzip compression.
 
     Args:
@@ -53,7 +50,7 @@ def _open_file(filepath: Union[str, Path]) -> io.TextIOWrapper:
 
 
 def validate_lhe_file(
-    file_input: Union[str, TextIO],
+    file_input: str | TextIO,
     schema_path: str,
     enable_xsd: bool = True,
     enable_pylhe: bool = True,
@@ -91,20 +88,11 @@ def _validate_file_path(
     """Validate a file by path."""
     if enable_xsd:
         print("  Checking XSD schema compliance...")
-        xsd, schema_doc = _load_schema_resources(schema_path)
-
         # Handle both compressed and uncompressed files by magic number
         with _open_file(file_path) as f:
             xml_payload = _extract_xml_payload(f.read())
-        xml = etree.parse(StringIO(xml_payload))
 
-        if not xsd.validate(xml):
-            print("  ❌ XSD validation failed!")
-            print(xsd.error_log)
-            return False
-        print("  ✓ XSD validation passed")
-
-        if not _validate_mixed_block_text(xml, schema_doc):
+        if not _validate_xsd_payload(xml_payload, schema_path):
             return False
 
     if enable_pylhe:
@@ -121,17 +109,7 @@ def _validate_buffer(
     """Validate content from buffer/stdin."""
     if enable_xsd:
         print("  Checking XSD schema compliance...")
-        xsd, schema_doc = _load_schema_resources(schema_path)
-
-        xml = etree.parse(StringIO(_extract_xml_payload(content)))
-
-        if not xsd.validate(xml):
-            print("  ❌ XSD validation failed!")
-            print(xsd.error_log)
-            return False
-        print("  ✓ XSD validation passed")
-
-        if not _validate_mixed_block_text(xml, schema_doc):
+        if not _validate_xsd_payload(_extract_xml_payload(content), schema_path):
             return False
 
     if enable_pylhe:
@@ -142,33 +120,9 @@ def _validate_buffer(
     return True
 
 
-def _load_schema_resources(
-    schema_path: str,
-) -> tuple[etree.XMLSchema, etree._ElementTree]:
-    """Load the schema and its XML document."""
-    with open(schema_path) as schema_file:
-        schema_doc = etree.parse(schema_file)
-    return etree.XMLSchema(schema_doc), schema_doc
-
-
-def _get_text_pattern(
-    schema_doc: etree._ElementTree, type_name: str
-) -> re.Pattern[str]:
-    """Extract a named supplemental text pattern from the schema."""
-    matches = schema_doc.xpath(
-        "/xs:schema/xs:simpleType[@name=$type_name]/xs:restriction/xs:pattern/@value",
-        namespaces=XSD_NS,
-        type_name=type_name,
-    )
-    if len(matches) != 1:
-        err = f"Expected exactly one pattern for schema type {type_name!r}"
-        raise ValueError(err)
-    return re.compile(matches[0])
-
-
-def _normalize_block_text(text: str) -> str:
-    """Normalize line endings before regex validation."""
-    return text.replace("\r\n", "\n").replace("\r", "\n")
+def _load_xsd11_schema(schema_path: str) -> xmlschema.XMLSchema11:
+    """Load the XSD 1.1 schema."""
+    return xmlschema.XMLSchema11(schema_path)
 
 
 def _extract_xml_payload(content: str) -> str:
@@ -185,30 +139,21 @@ def _extract_xml_payload(content: str) -> str:
     return content[: end_index + len(closing_tag)]
 
 
-def _validate_mixed_block_text(
-    xml: etree._ElementTree, schema_doc: etree._ElementTree
+def _validate_xsd_payload(
+    xml_payload: str,
+    schema_path: str,
 ) -> bool:
-    """Apply supplemental regex checks to the leading text in init/event blocks."""
-    print("  Checking init/event text patterns...")
+    """Validate an XML payload against the XSD 1.1 schema."""
+    schema = _load_xsd11_schema(schema_path)
+    errors = list(schema.iter_errors(xml_payload))
+    if errors:
+        print("  ❌ XSD validation failed!")
+        for error in errors:
+            print(f"  Path: {error.path}")
+            print(f"  Reason: {error.reason}")
+        return False
 
-    patterns = {
-        "init": _get_text_pattern(schema_doc, "InitTextType"),
-        "event": _get_text_pattern(schema_doc, "EventTextType"),
-    }
-
-    for tag_name, pattern in patterns.items():
-        for element in xml.getroot().iter(tag_name):
-            text = _normalize_block_text(element.text or "")
-            if pattern.fullmatch(text) is None:
-                line_info = (
-                    f" at line {element.sourceline}"
-                    if element.sourceline is not None
-                    else ""
-                )
-                print(f"  ❌ {tag_name} text validation failed{line_info}!")
-                return False
-
-    print("  ✓ init/event text patterns passed")
+    print("  ✓ XSD validation passed")
     return True
 
 
@@ -299,7 +244,7 @@ Validation levels:
     # Check if reading from stdin
     use_stdin = not args.files and not sys.stdin.isatty()
 
-    file_inputs: list[Union[str, TextIO]] = []
+    file_inputs: list[str | TextIO] = []
     if use_stdin:
         # Read from stdin
         file_inputs.append(sys.stdin)
