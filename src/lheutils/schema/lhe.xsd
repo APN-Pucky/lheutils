@@ -24,6 +24,38 @@
     <xs:anyAttribute processContents="skip"/>
   </xs:complexType>
 
+  <!--
+    Supplemental text-pattern checks for the leading plain-text payload of
+    mixed init/event blocks. XSD 1.0 cannot attach these directly to mixed
+    content that also allows child elements, so lhevalidate.py applies them
+    separately after the main schema validation step.
+  -->
+  <xs:simpleType name="InitTextType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)(\n\s*#.*)*(\n\s*([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s*(\n\s*#.*)*)*\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EventTextType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="InitBlockType" mixed="true">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:complexType name="EventBlockType" mixed="true">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
   <xs:complexType name="GeneratorType">
     <xs:simpleContent>
       <xs:extension base="xs:string">
@@ -101,8 +133,8 @@
   </xs:element>
 
   <xs:element name="header" type="OpenMixedContentType"/>
-  <xs:element name="init" type="OpenMixedContentType"/>
-  <xs:element name="event" type="OpenMixedContentType"/>
+  <xs:element name="init" type="InitBlockType"/>
+  <xs:element name="event" type="EventBlockType"/>
 
   <xs:element name="generator" type="GeneratorType"/>
   <xs:element name="initrwgt" type="InitRwgtType"/>
