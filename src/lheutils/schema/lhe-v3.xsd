@@ -114,7 +114,7 @@
 
   <xs:complexType name="WgtType">
     <xs:simpleContent>
-      <xs:extension base="xs:string">
+      <xs:extension base="xs:double">
         <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
@@ -124,9 +124,9 @@
   <xs:complexType name="ScalesType">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute name="muf" type="xs:string"/>
-        <xs:attribute name="mur" type="xs:string"/>
-        <xs:attribute name="mups" type="xs:string"/>
+        <xs:attribute name="muf" type="xs:double"/>
+        <xs:attribute name="mur" type="xs:double"/>
+        <xs:attribute name="mups" type="xs:double"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
     </xs:simpleContent>
