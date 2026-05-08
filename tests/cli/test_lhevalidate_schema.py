@@ -8,12 +8,21 @@ from lheutils.cli.lhevalidate import validate_lhe_file
 
 SCHEMA_PATH = Path("src/lheutils/schema/lhe.xsd")
 REFERENCE_FILES = [
-    "pylhe-testfile-madgraph-2.0.0-wbj.lhe",
-    "pylhe-testfile-powheg-box-v2-directphoton.lhe",
-    "pylhe-testfile-pr180.lhe",
+    "pylhe-testfile-sherpa-3.0.1-eejjj.lhe",
     "pylhe-testfile-whizard-3.1.4-eeWW.lhe",
+    "pylhe-testfile-pr180.lhe",
     # Contains garbage line in init
     # "pylhe-testlhef3.lhe",
+]
+INVALID_REFERENCE_FILES = [
+    (
+        "pylhe-testfile-madgraph-2.0.0-wbj.lhe",
+        "missing required attribute 'name'",
+    ),
+    (
+        "pylhe-testfile-powheg-box-v2-directphoton.lhe",
+        "attribute combine='None'",
+    ),
 ]
 
 
@@ -32,14 +41,39 @@ def test_reference_files_validate_against_xsd(lhe_filename: str) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("lhe_filename", "expected_message"),
+    INVALID_REFERENCE_FILES,
+)
+def test_invalid_reference_files_fail_against_xsd(
+    lhe_filename: str,
+    expected_message: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    try:
+        lhe_path = skhep_testdata.data_path(lhe_filename)
+    except Exception:
+        pytest.skip(f"File {lhe_filename} not available in skhep_testdata")
+
+    assert not validate_lhe_file(
+        lhe_path,
+        str(SCHEMA_PATH),
+        enable_xsd=True,
+        enable_pylhe=False,
+    )
+    stdout = capsys.readouterr().out
+    assert "XSD validation failed!" in stdout
+    assert expected_message in stdout
+
+
 def test_validate_lhe_file_honors_disabled_checks(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     try:
-        lhe_path = skhep_testdata.data_path("pylhe-testfile-whizard-3.1.4-eeWW.lhe")
+        lhe_path = skhep_testdata.data_path("pylhe-testfile-sherpa-3.0.1-eejjj.lhe")
     except Exception:
         pytest.skip(
-            "File pylhe-testfile-whizard-3.1.4-eeWW.lhe not available in skhep_testdata"
+            "File pylhe-testfile-sherpa-3.0.1-eejjj.lhe not available in skhep_testdata"
         )
 
     assert validate_lhe_file(
@@ -113,7 +147,7 @@ def test_regex_text_validation_rejects_bad_weights_text(
     )
     stdout = capsys.readouterr().out
     assert "XSD validation failed!" in stdout
-    assert "/LesHouchesEvents/event/weights" in stdout
+    assert "Unexpected child with tag 'weights'" in stdout
 
 
 def test_xsd_validation_ignores_trailing_footer_text() -> None:

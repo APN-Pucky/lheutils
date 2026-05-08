@@ -6,8 +6,10 @@ CLI tool to validate LHE files against XSD schema.
 import argparse
 import gzip
 import io
+import re
 import sys
 import warnings
+from functools import cache
 from io import StringIO
 from pathlib import Path
 from typing import TextIO
@@ -16,6 +18,14 @@ import pylhe
 import xmlschema
 
 from lheutils.cli.util import create_base_parser
+
+SCHEMA_FILENAMES = ("lhe-v1.xsd", "lhe-v2.xsd", "lhe-v3.xsd")
+SCHEMA_VERSIONS = {
+    "lhe-v1.xsd": "1.0",
+    "lhe-v2.xsd": "2.0",
+    "lhe-v3.xsd": "3.0",
+}
+LHE_VERSION_RE = re.compile(r"<LesHouchesEvents\b[^>]*\bversion=['\"]([^'\"]+)['\"]")
 
 
 def _is_gzipped(filepath: str | Path) -> bool:
@@ -59,7 +69,7 @@ def validate_lhe_file(
 
     Args:
         file_input: File path or file object to validate
-        schema_path: Path to the XSD schema file
+        schema_path: Path to an XSD schema file or schema directory
         enable_xsd: Whether to perform XSD validation
         enable_pylhe: Whether to perform pylhe parsing validation
 
@@ -120,6 +130,60 @@ def _validate_buffer(
     return True
 
 
+def _discover_schema_paths(schema_path: str | Path) -> tuple[Path, ...]:
+    """Discover the versioned LHE schema files to use for validation."""
+    path = Path(schema_path)
+    schema_dir = path if path.is_dir() else path.parent
+    versioned_paths = tuple(
+        candidate
+        for candidate in (schema_dir / name for name in SCHEMA_FILENAMES)
+        if candidate.exists()
+    )
+    if versioned_paths:
+        return versioned_paths
+    if path.exists():
+        return (path,)
+    msg = f"No schema files found at {path}"
+    raise FileNotFoundError(msg)
+
+
+def _schema_version(schema_path: Path) -> str | None:
+    """Return the LHE version associated with a schema filename."""
+    return SCHEMA_VERSIONS.get(schema_path.name)
+
+
+def _extract_lhe_version(xml_payload: str) -> str | None:
+    """Extract the LesHouchesEvents version attribute from the XML payload."""
+    match = LHE_VERSION_RE.search(xml_payload)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _order_schema_paths(
+    schema_paths: tuple[Path, ...], lhe_version: str | None
+) -> tuple[Path, ...]:
+    """Try the matching schema version first, then the remaining ones."""
+    return tuple(
+        sorted(
+            schema_paths,
+            key=lambda path: (_schema_version(path) != lhe_version, path.name),
+        )
+    )
+
+
+def _select_failure_to_report(
+    failures: list[tuple[Path, list[object]]], lhe_version: str | None
+) -> tuple[Path, list[object]]:
+    """Pick the most relevant schema failure to report to the user."""
+    if lhe_version is not None:
+        for schema_path, errors in failures:
+            if _schema_version(schema_path) == lhe_version:
+                return schema_path, errors
+    return min(failures, key=lambda item: len(item[1]))
+
+
+@cache
 def _load_xsd11_schema(schema_path: str) -> xmlschema.XMLSchema11:
     """Load the XSD 1.1 schema."""
     return xmlschema.XMLSchema11(schema_path)
@@ -143,18 +207,30 @@ def _validate_xsd_payload(
     xml_payload: str,
     schema_path: str,
 ) -> bool:
-    """Validate an XML payload against the XSD 1.1 schema."""
-    schema = _load_xsd11_schema(schema_path)
-    errors = list(schema.iter_errors(xml_payload))
-    if errors:
-        print("  ❌ XSD validation failed!")
-        for error in errors:
-            print(f"  Path: {error.path}")
-            print(f"  Reason: {error.reason}")
-        return False
+    """Validate an XML payload against the available LHE XSD schemas."""
+    lhe_version = _extract_lhe_version(xml_payload)
+    schema_paths = _order_schema_paths(_discover_schema_paths(schema_path), lhe_version)
+    failures: list[tuple[Path, list[object]]] = []
 
-    print("  ✓ XSD validation passed")
-    return True
+    for candidate in schema_paths:
+        schema = _load_xsd11_schema(str(candidate))
+        errors = list(schema.iter_errors(xml_payload))
+        if not errors:
+            print(f"  ✓ XSD validation passed ({candidate.name})")
+            return True
+        failures.append((candidate, errors))
+
+    print("  ❌ XSD validation failed!")
+    reported_schema, reported_errors = _select_failure_to_report(
+        failures,
+        lhe_version,
+    )
+    if len(schema_paths) > 1:
+        print(f"  Schema: {reported_schema.name}")
+    for error in reported_errors:
+        print(f"  Path: {error.path}")
+        print(f"  Reason: {error.reason}")
+    return False
 
 
 def _validate_lhe_structure(lhefile: pylhe.LHEFile) -> bool:
@@ -186,6 +262,11 @@ def _validate_lhe_structure(lhefile: pylhe.LHEFile) -> bool:
     except Exception as e:
         print(f"  ❌ Error parsing events: {e}")
         return False
+
+
+def _get_default_schema_dir() -> Path:
+    """Return the directory that contains the LHE XSD schema files."""
+    return Path(__file__).parent.parent / "schema"
 
 
 def main() -> None:
@@ -235,10 +316,12 @@ Validation levels:
     enable_xsd = not args.no_xsd
     enable_pylhe = not args.no_pylhe
 
-    # Find schema file
-    schema_path = Path(__file__).parent.parent / "schema" / "lhe.xsd"
-    if not schema_path.exists():
-        print(f"Error: Schema file not found at {schema_path}", file=sys.stderr)
+    # Find schema files
+    schema_path = _get_default_schema_dir()
+    try:
+        _discover_schema_paths(schema_path)
+    except FileNotFoundError:
+        print(f"Error: Schema files not found at {schema_path}", file=sys.stderr)
         sys.exit(1)
 
     # Check if reading from stdin

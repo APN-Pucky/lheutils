@@ -35,11 +35,11 @@
   -->
   <xs:complexType name="InitBlockType" mixed="true">
     <xs:choice minOccurs="0" maxOccurs="unbounded">
-      <xs:element ref="generator" use="optional"/>
-      <xs:element ref="xsecinfo" use="required"/>
-      <xs:element ref="cutsinfo" use="optional"/>
-      <xs:element ref="procinfo" use="optional"/>
-      <xs:element ref="mergetype" use="optional"/>
+      <xs:element ref="generator"/>
+      <xs:element ref="xsecinfo"/>
+      <xs:element ref="cutsinfo"/>
+      <xs:element ref="procinfo"/>
+      <xs:element ref="mergetype"/>
       <xs:any processContents="lax"/>
     </xs:choice>
     <xs:anyAttribute processContents="skip"/>
@@ -49,6 +49,8 @@
   <xs:complexType name="EventBlockType" mixed="true">
     <xs:choice minOccurs="0" maxOccurs="unbounded">
       <xs:element ref="weight"/>
+      <xs:element ref="clustering"/>
+      <xs:element ref="pdfinfo"/>
     </xs:choice>
     <xs:anyAttribute processContents="skip"/>
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
@@ -98,6 +100,12 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="XSecInfoValueType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
   <xs:complexType name="XSecInfoType">
     <xs:simpleContent>
       <xs:extension base="XSecInfoValueType">
@@ -121,6 +129,25 @@
         <xs:attribute name="name" type="xs:string" use="optional"/>
         <xs:attribute name="born" type="xs:string" use="optional"/>
         <xs:attribute name="sudakov" type="xs:string" use="optional"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:simpleType name="PdfInfoValueType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\s*[-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?\s+[-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="PdfInfoType">
+    <xs:simpleContent>
+      <xs:extension base="PdfInfoValueType">
+        <xs:attribute name="p1" type="xs:int"/>
+        <xs:attribute name="p2" type="xs:int"/>
+        <xs:attribute name="x1" type="xs:double"/>
+        <xs:attribute name="x2" type="xs:double"/>
+        <xs:attribute name="scale" type="xs:double"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
     </xs:simpleContent>
@@ -200,15 +227,6 @@
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
     </xs:simpleContent>
-
-    <!-- enforce one vs two numbers -->
-    <xs:assert test="
-      if (@limit = 'minmax')
-      then matches(normalize-space(.),
-           '^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?\s+[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$')
-      else matches(normalize-space(.),
-           '^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$')
-    "/>
   </xs:complexType>
 
   <xs:complexType name="PTypeType">
@@ -229,11 +247,12 @@
   <xs:element name="clustering" type="ClusteringType"/>
   <xs:element name="clus" type="ClusType"/>
   <xs:element name="weight" type="WeightType"/>
+  <xs:element name="pdfinfo" type="PdfInfoType"/>
   <xs:element name="xsecinfo" type="XSecInfoType"/>
   <xs:element name="cutsinfo" type="CutsInfoType"/>
   <xs:element name="ptype" type="PTypeType"/>
   <xs:element name="cut" type="CutType"/>
-  <xs:element name="proctype" type="ProcTypeType"/>
+  <xs:element name="procinfo" type="ProcInfoType"/>
   <xs:element name="mergetype" type="MergeTypeType"/>
 
 </xs:schema>

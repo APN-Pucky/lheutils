@@ -55,6 +55,7 @@
       <xs:element ref="rwgt"/>
       <xs:element ref="weights"/>
       <xs:element ref="scales"/>
+      <xs:any processContents="lax"/>
     </xs:choice>
     <xs:anyAttribute processContents="skip"/>
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
@@ -63,7 +64,7 @@
   <xs:complexType name="GeneratorType">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="name" type="xs:string" use="required"/>
         <xs:attribute name="version" type="xs:string" use="required"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
@@ -99,8 +100,7 @@
   <xs:complexType name="WeightType">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute name="id" type="xs:string"/>
-        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
     </xs:simpleContent>

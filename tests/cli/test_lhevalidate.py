@@ -10,13 +10,11 @@ CLOSING_TAG = "</LesHouchesEvents>"
 LHE_FILES = [
     "pylhe-testfile-madgraph-2.2.1-Z-ckkwl.lhe.gz",
     "pylhe-testfile-madgraph-2.2.1-Z-fxfx.lhe.gz",
-    "pylhe-testfile-madgraph-2.2.1-Z-mlm.lhe.gz",
     "pylhe-testfile-pr180.lhe",
     "pylhe-testfile-pr29.lhe",
     "pylhe-testfile-pythia-6.413-ttbar.lhe",
     "pylhe-testfile-pythia-8.3.14-weakbosons.lhe",
     "pylhe-testfile-sherpa-3.0.1-eejjj.lhe",
-    "pylhe-testfile-whizard-3.1.4-eeWW.lhe",
 ]
 LHE_FILES_BAD = [
     (
@@ -26,6 +24,10 @@ LHE_FILES_BAD = [
     (
         "pylhe-testlhef3.lhe",
         "assertion test is false",
+    ),
+    (
+        "pylhe-testfile-madgraph-2.2.1-Z-mlm.lhe.gz",
+        "Unexpected child with tag 'clustering'",
     ),
 ]
 
@@ -47,11 +49,12 @@ POWHEG_LHE_FILES_BAD = [
 # samples that become valid once the random-state footer is trimmed.
 
 
-def _run_lhevalidate(file_path):
+def _run_lhevalidate(file_path, *extra_args):
     return subprocess.run(
         [
             f"{path}lhevalidate.py",
             str(file_path),
+            *extra_args,
         ],
         check=False,
         capture_output=True,
@@ -135,3 +138,16 @@ def test_lhevalidate_powheg_bad(lhe_filename, expected_message, tmp_path):
 
     result = _run_lhevalidate(trimmed_file)
     _assert_validation_failed(result, f"trimmed {lhe_filename}", expected_message)
+
+
+def test_lhevalidate_whizard_v2_xsd_only():
+    """Test a paper-consistent LHEF v2 sample with XSD-only validation."""
+    try:
+        file_path = skhep_testdata.data_path("pylhe-testfile-whizard-3.1.4-eeWW.lhe")
+    except Exception:
+        pytest.skip(
+            "File pylhe-testfile-whizard-3.1.4-eeWW.lhe not available in skhep_testdata"
+        )
+
+    result = _run_lhevalidate(file_path, "--no-pylhe")
+    _assert_validation_passed(result, "pylhe-testfile-whizard-3.1.4-eeWW.lhe")
