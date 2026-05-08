@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  elementFormDefault="qualified"
+  version="1.1"
+>
+  <xs:annotation>
+    <xs:documentation>
+      XML Schema for the common core shared by the plain-text LHE examples in
+      src/skhep_testdata/data/pylhe*.lhe.
+
+      This schema keeps the common Les Houches container structure explicit,
+      and also explicitly models generator/reweighting elements that recur
+      across multiple samples: generator, initrwgt, rwgt, weight(s), scales,
+      and the supporting weightgroup/wgt elements.
+
+      Generator-specific extension elements are intentionally not declared
+      here, but they are accepted through lax wildcard validation so files
+      with additional MadGraph, Sherpa, or other extension tags are not
+      rejected.
+    </xs:documentation>
+  </xs:annotation>
+
+  <xs:complexType name="HeaderType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:any processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <!--
+    XSD 1.1 assertions let these mixed-content blocks keep their nested XML
+    extension tags while still enforcing the leading plain-text LHE payload
+    with a regex.
+  -->
+  <xs:complexType name="InitBlockType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="generator" use="optional"/>
+      <xs:element ref="xsecinfo" use="required"/>
+      <xs:element ref="cutsinfo" use="optional"/>
+      <xs:element ref="procinfo" use="optional"/>
+      <xs:element ref="mergetype" use="optional"/>
+      <xs:any processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute processContents="skip"/>
+    <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)(\n\s*#.*)*(\n\s*([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?\d+)\s*(\n\s*#.*)*)*\s*$')"/>
+  </xs:complexType>
+
+  <xs:complexType name="EventBlockType" mixed="true">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="weight"/>
+    </xs:choice>
+    <xs:anyAttribute processContents="skip"/>
+    <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
+  </xs:complexType>
+
+  <xs:element name="LesHouchesEvents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" minOccurs="0"/>
+        <xs:element ref="init" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="2.0"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="GeneratorType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="version" type="xs:string" use="required"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+
+  <xs:complexType name="ClusteringType">
+    <xs:sequence>
+      <xs:element ref="clus" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ClusType">
+    <xs:simpleContent>
+      <xs:extension base="ClusValueType">
+        <xs:attribute name="scale" type="xs:string"/>
+        <xs:attribute name="alphas" type="xs:string"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:simpleType name="ClusValueType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\s*[-+]?\d+\s+[-+]?\d+(\s+[-+]?\d+)?\s*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="XSecInfoType">
+    <xs:simpleContent>
+      <xs:extension base="XSecInfoValueType">
+          <xs:attribute name="neve" type="xs:string" use="required"/>
+          <xs:attribute name="totxsec" type="xs:string" use="required"/>
+          <xs:attribute name="maxweight" type="xs:string" use="optional"/>
+          <xs:attribute name="minweight" type="xs:string" use="optional"/>
+          <xs:attribute name="meanweight" type="xs:string" use="optional"/>
+          <xs:attribute name="negweights" type="xs:string" use="optional"/>
+          <xs:attribute name="varweights" type="xs:string" use="optional"/>
+          <xs:attribute name="eventgroups" type="xs:string" use="optional"/>
+          <xs:attribute name="maxingroupweight" type="xs:string" use="optional"/>
+          <xs:attribute name="miningroupweight" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="WeightType">
+    <xs:simpleContent>
+      <xs:extension base="xs:double">
+        <xs:attribute name="name" type="xs:string" use="optional"/>
+        <xs:attribute name="born" type="xs:string" use="optional"/>
+        <xs:attribute name="sudakov" type="xs:string" use="optional"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="MergeTypeType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="iproc" type="xs:string" use="optional"/>
+        <xs:attribute name="mergingscale" type="xs:string" use="required"/>
+        <xs:attribute name="maxmult" type="xs:string" use="optional"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="ProcInfoType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="iproc" type="xs:string" use="optional"/>
+        <xs:attribute name="loops" type="xs:string" use="optional"/>
+        <xs:attribute name="qcdorder" type="xs:string" use="optional"/>
+        <xs:attribute name="eworder" type="xs:string" use="optional"/>
+        <xs:attribute name="fscheme" type="xs:string" use="optional"/>
+        <xs:attribute name="rscheme" type="xs:string" use="optional"/>
+        <xs:attribute name="scheme" type="xs:string" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="CutsInfoType">
+    <xs:sequence>
+      <xs:element ref="ptype"
+                  minOccurs="0"
+                  maxOccurs="unbounded"/>
+
+      <xs:element ref="cut"
+                  minOccurs="0"
+                  maxOccurs="unbounded"/>
+    </xs:sequence>
+
+    <xs:anyAttribute processContents="skip"/>
+  </xs:complexType>
+
+  <xs:simpleType name="CutLimitType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="min"/>
+      <xs:enumeration value="max"/>
+      <xs:enumeration value="minmax"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="CutType">
+    <xs:simpleContent>
+      <!-- one or two floating-point numbers -->
+      <xs:extension base="xs:string">
+
+        <!-- mandatory -->
+        <xs:attribute name="type" type="xs:string" use="required"/>
+
+        <!-- optional particle selectors -->
+        <xs:attribute name="p1" type="xs:string" default="0"/>
+        <xs:attribute name="p2" type="xs:string"/>
+        <xs:attribute name="p3" type="xs:string"/>
+        <xs:attribute name="p4" type="xs:string"/>
+        <xs:attribute name="p5" type="xs:string"/>
+        <xs:attribute name="p6" type="xs:string"/>
+        <xs:attribute name="p7" type="xs:string"/>
+        <xs:attribute name="p8" type="xs:string"/>
+        <xs:attribute name="p9" type="xs:string"/>
+
+        <!-- min/max/minmax -->
+        <xs:attribute name="limit"
+                      type="CutLimitType"
+                      default="min"/>
+
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+
+    <!-- enforce one vs two numbers -->
+    <xs:assert test="
+      if (@limit = 'minmax')
+      then matches(normalize-space(.),
+           '^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?\s+[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$')
+      else matches(normalize-space(.),
+           '^[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?$')
+    "/>
+  </xs:complexType>
+
+  <xs:complexType name="PTypeType">
+    <xs:simpleContent>
+      <!-- list of PDG IDs -->
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:anyAttribute processContents="skip"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="header" type="HeaderType"/>
+  <xs:element name="init" type="InitBlockType"/>
+  <xs:element name="event" type="EventBlockType"/>
+
+  <xs:element name="generator" type="GeneratorType"/>
+  <xs:element name="clustering" type="ClusteringType"/>
+  <xs:element name="clus" type="ClusType"/>
+  <xs:element name="weight" type="WeightType"/>
+  <xs:element name="xsecinfo" type="XSecInfoType"/>
+  <xs:element name="cutsinfo" type="CutsInfoType"/>
+  <xs:element name="ptype" type="PTypeType"/>
+  <xs:element name="cut" type="CutType"/>
+  <xs:element name="proctype" type="ProcTypeType"/>
+  <xs:element name="mergetype" type="MergeTypeType"/>
+
+</xs:schema>
