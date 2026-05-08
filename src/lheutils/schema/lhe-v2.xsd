@@ -21,6 +21,18 @@
     </xs:documentation>
   </xs:annotation>
 
+  <xs:element name="LesHouchesEvents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" minOccurs="0"/>
+        <xs:element ref="init" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="2.0"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+
   <xs:complexType name="HeaderType" mixed="true">
     <xs:choice minOccurs="0" maxOccurs="unbounded">
       <xs:any processContents="lax"/>
@@ -56,18 +68,6 @@
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
   </xs:complexType>
 
-  <xs:element name="LesHouchesEvents">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="header" minOccurs="0"/>
-        <xs:element ref="init" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="event" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" fixed="2.0"/>
-      <xs:anyAttribute processContents="skip"/>
-    </xs:complexType>
-  </xs:element>
-
   <xs:complexType name="GeneratorType">
     <xs:simpleContent>
       <xs:extension base="xs:string">
@@ -87,8 +87,8 @@
   <xs:complexType name="ClusType">
     <xs:simpleContent>
       <xs:extension base="ClusValueType">
-        <xs:attribute name="scale" type="xs:string"/>
-        <xs:attribute name="alphas" type="xs:string"/>
+        <xs:attribute name="scale" type="xs:double"/>
+        <xs:attribute name="alphas" type="xs:double"/>
         <xs:anyAttribute processContents="skip"/>
       </xs:extension>
     </xs:simpleContent>
@@ -109,8 +109,8 @@
   <xs:complexType name="XSecInfoType">
     <xs:simpleContent>
       <xs:extension base="XSecInfoValueType">
-          <xs:attribute name="neve" type="xs:string" use="required"/>
-          <xs:attribute name="totxsec" type="xs:string" use="required"/>
+          <xs:attribute name="neve" type="xs:int" use="required"/>
+          <xs:attribute name="totxsec" type="xs:double" use="required"/>
           <xs:attribute name="maxweight" type="xs:string" use="optional"/>
           <xs:attribute name="minweight" type="xs:string" use="optional"/>
           <xs:attribute name="meanweight" type="xs:string" use="optional"/>

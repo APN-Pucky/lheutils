@@ -21,6 +21,18 @@
     </xs:documentation>
   </xs:annotation>
 
+  <xs:element name="LesHouchesEvents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" minOccurs="0"/>
+        <xs:element ref="init" minOccurs="1" maxOccurs="1"/>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="1.0"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
+
   <xs:complexType name="HeaderType" mixed="true">
     <xs:choice minOccurs="0" maxOccurs="unbounded">
       <xs:any processContents="lax"/>
@@ -45,18 +57,6 @@
     <xs:anyAttribute processContents="skip"/>
     <xs:assert test="matches(string-join(text(), ''), '^(\s*#.*\n)*\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*((\n\s*#.*)|(\n\s*([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?\d+)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s+([-+]?((\d+(\.\d*)?)|(\.\d+))([eE][-+]?\d+)?)\s*))*\s*$')"/>
   </xs:complexType>
-
-  <xs:element name="LesHouchesEvents">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="header" minOccurs="0"/>
-        <xs:element ref="init" minOccurs="1" maxOccurs="1"/>
-        <xs:element ref="event" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" fixed="1.0"/>
-      <xs:anyAttribute processContents="skip"/>
-    </xs:complexType>
-  </xs:element>
 
   <xs:element name="header" type="HeaderType"/>
   <xs:element name="init" type="InitBlockType"/>

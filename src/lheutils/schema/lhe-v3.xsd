@@ -21,12 +21,17 @@
     </xs:documentation>
   </xs:annotation>
 
-  <xs:complexType name="OpenMixedContentType" mixed="true">
-    <xs:sequence>
-      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
-    </xs:sequence>
-    <xs:anyAttribute processContents="skip"/>
-  </xs:complexType>
+  <xs:element name="LesHouchesEvents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header" minOccurs="0"/>
+        <xs:element ref="init"/>
+        <xs:element ref="event" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="3.0"/>
+      <xs:anyAttribute processContents="skip"/>
+    </xs:complexType>
+  </xs:element>
 
   <xs:complexType name="HeaderType" mixed="true">
     <xs:choice minOccurs="0" maxOccurs="unbounded">
@@ -138,17 +143,6 @@
     </xs:restriction>
   </xs:simpleType>
 
-  <xs:element name="LesHouchesEvents">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="header" minOccurs="0"/>
-        <xs:element ref="init"/>
-        <xs:element ref="event" maxOccurs="unbounded"/>
-      </xs:sequence>
-      <xs:attribute name="version" type="xs:string" use="required" fixed="3.0"/>
-      <xs:anyAttribute processContents="skip"/>
-    </xs:complexType>
-  </xs:element>
 
   <xs:element name="header" type="HeaderType"/>
   <xs:element name="init" type="InitBlockType"/>
