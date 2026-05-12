@@ -11,7 +11,6 @@ import signal
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Optional
 
 import pylhe
 
@@ -23,13 +22,13 @@ signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 def convert_lhe_file(
     input_file: str,
-    output_file: Optional[str] = None,
+    output_file: str | None = None,
     compress: bool = False,
     rwgt: bool = True,
     weights: bool = False,
-    append_lhe_weight: Optional[tuple[str, str, str]] = None,
-    only_weight_id: Optional[str] = None,
-    add_initrwgt: Optional[list[tuple[str, str, str]]] = None,
+    append_lhe_weight: tuple[str, str, str] | None = None,
+    only_weight_id: str | None = None,
+    add_initrwgt: list[tuple[str, str, str]] | None = None,
 ) -> tuple[int, str]:
     """Convert an LHE file with specified options.
 
@@ -113,7 +112,7 @@ def convert_lhe_file(
                     if only_weight_id in event.weights:
                         event.eventinfo.weight = event.weights[only_weight_id]
                         # After promoting this weight to central, remove all alternate weights
-                        event.weights = {}
+                        event.weights = {only_weight_id: event.eventinfo.weight}
                     else:
                         # skip this event
                         continue
