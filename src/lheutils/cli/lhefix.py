@@ -12,7 +12,6 @@ import sys
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Optional
 
 import pylhe
 
@@ -20,9 +19,9 @@ from lheutils.cli.util import create_base_parser
 
 
 def fix_file(
-    filepath: Optional[str] = None,
+    filepath: str | None = None,
     compress: bool = False,
-    suffix: Optional[str] = None,
+    suffix: str | None = None,
     rwgt: bool = True,
     weights: bool = False,
 ) -> None:

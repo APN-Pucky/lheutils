@@ -12,7 +12,6 @@ import sys
 from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional
 
 import pylhe
 
@@ -39,7 +38,7 @@ def check_init_compatibility(init_files: list[pylhe.LHEInit]) -> bool:
 
 def merge_lhe_files(
     input_files: list[str],
-    output_file: Optional[str] = None,
+    output_file: str | None = None,
     rwgt: bool = True,
     weights: bool = False,
 ) -> tuple[int, str]:

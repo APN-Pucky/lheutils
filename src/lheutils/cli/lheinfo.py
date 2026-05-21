@@ -12,7 +12,7 @@ import warnings
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TextIO, Union
+from typing import Any, TextIO
 
 import pylhe
 from typing_extensions import Self
@@ -208,9 +208,7 @@ def get_weight_groups(lhefile: pylhe.LHEFile) -> dict[str, int]:
     for index, entry in enumerate(lhefile.header.initrwgt.entries, start=1):
         if isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
             group_name = (
-                entry.name
-                or entry.attributes.get("type")
-                or f"weight_group_{index}"
+                entry.name or entry.attributes.get("type") or f"weight_group_{index}"
             )
             weight_groups[group_name] = len(entry.weights)
         else:
@@ -223,9 +221,7 @@ def get_weight_groups(lhefile: pylhe.LHEFile) -> dict[str, int]:
 
 
 # TODO add weight variance
-def get_lheinfo(
-    filepath_or_fileobj: Union[str, TextIO], channels: bool = False
-) -> LHEInfo:
+def get_lheinfo(filepath_or_fileobj: str | TextIO, channels: bool = False) -> LHEInfo:
     # Read LHE file
     if isinstance(filepath_or_fileobj, str):
         lhefile = pylhe.LHEFile.fromfile(filepath_or_fileobj)
@@ -310,7 +306,7 @@ def get_lheinfo(
 
 
 def get_lhesummary(
-    filepaths_or_fileobjs: list[Union[str, TextIO]],
+    filepaths_or_fileobjs: list[str | TextIO],
     channels: bool = False,
 ) -> LHEAccumulatedInfo:
     lheacc = LHEAccumulatedInfo(
@@ -356,7 +352,7 @@ Examples:
     # Check if reading from stdin
     use_stdin = not args.files and not sys.stdin.isatty()
 
-    file_inputs: list[Union[str, TextIO]] = []
+    file_inputs: list[str | TextIO] = []
     if use_stdin:
         # Read from stdin
         file_inputs += [sys.stdin]

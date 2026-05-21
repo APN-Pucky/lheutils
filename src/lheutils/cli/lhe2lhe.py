@@ -103,7 +103,9 @@ def _keep_only_weight_definition(
                 kept_entries.append(entry)
             continue
 
-        kept_weights = [weight for weight in entry.weights if weight.id == only_weight_id]
+        kept_weights = [
+            weight for weight in entry.weights if weight.id == only_weight_id
+        ]
         if kept_weights:
             entry.weights = kept_weights
             kept_entries.append(entry)

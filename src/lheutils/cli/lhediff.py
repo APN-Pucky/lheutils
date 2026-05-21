@@ -162,7 +162,9 @@ def diff_lhe_init(
         weight_group: pylhe.LHEInitRWGTWeightGroup,
         index: int,
     ) -> str:
-        return weight_group.name or weight_group.attributes.get("type", f"group_{index}")
+        return weight_group.name or weight_group.attributes.get(
+            "type", f"group_{index}"
+        )
 
     def _diff_weight_list(
         prefix: str,
@@ -208,14 +210,18 @@ def diff_lhe_init(
                 old=len(weight_groups1), new=len(weight_groups2)
             )
 
-        for index, (wg1, wg2) in enumerate(zip(weight_groups1, weight_groups2), start=1):
+        for index, (wg1, wg2) in enumerate(
+            zip(weight_groups1, weight_groups2), start=1
+        ):
             group_name = _weight_group_name(wg1, index)
             group_name2 = _weight_group_name(wg2, index)
             if group_name != group_name2:
                 diffs[f"weight_group_key_{group_name}"] = LHEDiff(
                     old=group_name, new=group_name2
                 )
-            _diff_attributes(f"weight_group_{group_name}", wg1.attributes, wg2.attributes)
+            _diff_attributes(
+                f"weight_group_{group_name}", wg1.attributes, wg2.attributes
+            )
             _diff_weight_list(f"weight_group_{group_name}", wg1.weights, wg2.weights)
 
         direct_weights1 = [
