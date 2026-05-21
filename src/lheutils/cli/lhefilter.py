@@ -11,7 +11,6 @@ import argparse
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Optional
 
 import pylhe
 
@@ -20,8 +19,8 @@ from lheutils.cli.util import create_base_parser
 
 def matches_process_filter(
     event: pylhe.LHEEvent,
-    process_ids: Optional[set[int]],
-    exclude_process_ids: Optional[set[int]],
+    process_ids: set[int] | None,
+    exclude_process_ids: set[int] | None,
 ) -> bool:
     """Check if event matches process ID filters."""
     if process_ids is not None and event.eventinfo.pid not in process_ids:
@@ -33,14 +32,14 @@ def matches_process_filter(
 
 def matches_particle_filter(
     event: pylhe.LHEEvent,
-    incoming_a_pdgid: Optional[int],
-    exclude_incoming_a_pdgid: Optional[int],
-    incoming_b_pdgid: Optional[int],
-    exclude_incoming_b_pdgid: Optional[int],
-    incoming_pdgids: Optional[set[int]],
-    exclude_incoming_pdgids: Optional[set[int]],
-    outgoing_pdgids: Optional[set[int]],
-    exclude_outgoing_pdgids: Optional[set[int]],
+    incoming_a_pdgid: int | None,
+    exclude_incoming_a_pdgid: int | None,
+    incoming_b_pdgid: int | None,
+    exclude_incoming_b_pdgid: int | None,
+    incoming_pdgids: set[int] | None,
+    exclude_incoming_pdgids: set[int] | None,
+    outgoing_pdgids: set[int] | None,
+    exclude_outgoing_pdgids: set[int] | None,
 ) -> bool:
     """Check if event matches particle PDG ID filters."""
     # Get incoming particles (status -1)
@@ -96,8 +95,8 @@ def matches_particle_filter(
 
 def matches_event_filter(
     event_index: int,
-    include_event_ranges: Optional[list[tuple[int, int]]],
-    exclude_event_ranges: Optional[list[tuple[int, int]]],
+    include_event_ranges: list[tuple[int, int]] | None,
+    exclude_event_ranges: list[tuple[int, int]] | None,
 ) -> bool:
     """Check if event matches event number filters."""
     # event_index is 0-based, but user input is 1-based
@@ -133,78 +132,66 @@ def filter_lhe_file(
     input_file: str,
     rwgt: bool,
     weights: bool,
-    output_file: Optional[str] = None,
-    process_ids: Optional[set[int]] = None,
-    exclude_process_ids: Optional[set[int]] = None,
-    incoming_a_pdgid: Optional[int] = None,
-    exclude_incoming_a_pdgid: Optional[int] = None,
-    incoming_b_pdgid: Optional[int] = None,
-    exclude_incoming_b_pdgid: Optional[int] = None,
-    incoming_pdgids: Optional[set[int]] = None,
-    exclude_incoming_pdgids: Optional[set[int]] = None,
-    outgoing_pdgids: Optional[set[int]] = None,
-    exclude_outgoing_pdgids: Optional[set[int]] = None,
-    include_event_ranges: Optional[list[tuple[int, int]]] = None,
-    exclude_event_ranges: Optional[list[tuple[int, int]]] = None,
-    max_events: Optional[int] = None,
+    output_file: str | None = None,
+    process_ids: set[int] | None = None,
+    exclude_process_ids: set[int] | None = None,
+    incoming_a_pdgid: int | None = None,
+    exclude_incoming_a_pdgid: int | None = None,
+    incoming_b_pdgid: int | None = None,
+    exclude_incoming_b_pdgid: int | None = None,
+    incoming_pdgids: set[int] | None = None,
+    exclude_incoming_pdgids: set[int] | None = None,
+    outgoing_pdgids: set[int] | None = None,
+    exclude_outgoing_pdgids: set[int] | None = None,
+    include_event_ranges: list[tuple[int, int]] | None = None,
+    exclude_event_ranges: list[tuple[int, int]] | None = None,
+    max_events: int | None = None,
     negative_weights: bool = False,
 ) -> None:
     """Filter an LHE file based on the given criteria."""
-    try:
-        # Read the input LHE file
-        if input_file == "-":
-            lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
-        else:
-            lhefile = pylhe.LHEFile.fromfile(input_file)
+    # Read the input LHE file
+    if input_file == "-":
+        lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
+    else:
+        lhefile = pylhe.LHEFile.fromfile(input_file)
 
-        # Filter events
-        def _generator() -> Iterable[pylhe.LHEEvent]:
-            event_count = 0
-            for event_index, event in enumerate(lhefile.events):
-                # Apply all filters
-                if (
-                    matches_process_filter(event, process_ids, exclude_process_ids)
-                    and matches_particle_filter(
-                        event,
-                        incoming_a_pdgid,
-                        exclude_incoming_a_pdgid,
-                        incoming_b_pdgid,
-                        exclude_incoming_b_pdgid,
-                        incoming_pdgids,
-                        exclude_incoming_pdgids,
-                        outgoing_pdgids,
-                        exclude_outgoing_pdgids,
-                    )
-                    and matches_event_filter(
-                        event_index, include_event_ranges, exclude_event_ranges
-                    )
-                    and (not negative_weights or event.eventinfo.weight >= 0)
-                ):
-                    if max_events is not None and event_count >= max_events:
-                        break
-                    yield event
-                    event_count += 1
+    # Filter events
+    def _generator() -> Iterable[pylhe.LHEEvent]:
+        event_count = 0
+        for event_index, event in enumerate(lhefile.events):
+            # Apply all filters
+            if (
+                matches_process_filter(event, process_ids, exclude_process_ids)
+                and matches_particle_filter(
+                    event,
+                    incoming_a_pdgid,
+                    exclude_incoming_a_pdgid,
+                    incoming_b_pdgid,
+                    exclude_incoming_b_pdgid,
+                    incoming_pdgids,
+                    exclude_incoming_pdgids,
+                    outgoing_pdgids,
+                    exclude_outgoing_pdgids,
+                )
+                and matches_event_filter(
+                    event_index, include_event_ranges, exclude_event_ranges
+                )
+                and (not negative_weights or event.eventinfo.weight >= 0)
+            ):
+                if max_events is not None and event_count >= max_events:
+                    break
+                yield event
+                event_count += 1
 
-        # Create filtered LHE file
-        filtered_lhefile = pylhe.LHEFile(init=lhefile.init, events=_generator())
+    # Create filtered LHE file
+    filtered_lhefile = pylhe.LHEFile(init=lhefile.init, events=_generator())
 
-        # Output the result
-        if output_file:
-            filtered_lhefile.tofile(output_file, rwgt=rwgt, weights=weights)
-        else:
-            # Write to stdout
-            filtered_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
-
-    except FileNotFoundError:
-        if input_file == "-":
-            print("Error: Unable to read from stdin", file=sys.stderr)
-        else:
-            print(f"Error: File '{input_file}' not found", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        source = "stdin" if input_file == "-" else f"file '{input_file}'"
-        print(f"Error processing {source}: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Output the result
+    if output_file:
+        filtered_lhefile.tofile(output_file, rwgt=rwgt, weights=weights)
+    else:
+        # Write to stdout
+        filtered_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
 
 
 def parse_int_list(value: str) -> set[int]:
