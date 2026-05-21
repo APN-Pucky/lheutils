@@ -1,14 +1,15 @@
 from pathlib import Path
 
 import pylhe
+import skhep_testdata
 
 from lheutils.cli.lhestack import check_init_consistency, stack_lhe_files
 
 
 def test_check_init_consistency_accepts_matching_initrwgt():
     lhefiles = [
-        pylhe.LHEFile.fromfile("references/files/pylhe-testlhef3.lhe"),
-        pylhe.LHEFile.fromfile("references/files/pylhe-testlhef3.lhe"),
+        pylhe.LHEFile.fromfile(skhep_testdata.data_path("pylhe-testlhef3.lhe")),
+        pylhe.LHEFile.fromfile(skhep_testdata.data_path("pylhe-testlhef3.lhe")),
     ]
 
     assert check_init_consistency(lhefiles) is True
@@ -17,7 +18,7 @@ def test_check_init_consistency_accepts_matching_initrwgt():
 def test_check_init_consistency_rejects_different_initrwgt(tmp_path, capsys):
     modified = tmp_path / "modified_weights.lhe"
     modified.write_text(
-        Path("references/files/pylhe-testlhef3.lhe")
+        Path(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
         .read_text()
         .replace(
             "muR=0.10000E+01 muF=0.20000E+01",
@@ -27,7 +28,7 @@ def test_check_init_consistency_rejects_different_initrwgt(tmp_path, capsys):
     )
 
     lhefiles = [
-        pylhe.LHEFile.fromfile("references/files/pylhe-testlhef3.lhe"),
+        pylhe.LHEFile.fromfile(skhep_testdata.data_path("pylhe-testlhef3.lhe")),
         pylhe.LHEFile.fromfile(modified),
     ]
 
@@ -39,8 +40,10 @@ def test_check_init_consistency_rejects_different_initrwgt(tmp_path, capsys):
 def test_stack_lhe_files_preserves_initrwgt_header(tmp_path):
     first = tmp_path / "first.lhe"
     second = tmp_path / "second.lhe"
-    first.write_text(Path("references/files/pylhe-testlhef3.lhe").read_text())
-    second.write_text(Path("references/files/pylhe-testlhef3.lhe").read_text())
+    first.write_text(Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text())
+    second.write_text(
+        Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text()
+    )
 
     output_file = tmp_path / "stacked.lhe"
     stack_lhe_files([str(first), str(second)], str(output_file), new_ids=True)

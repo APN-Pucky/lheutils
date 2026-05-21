@@ -8,7 +8,7 @@ def test_split_lhe_file_preserves_initrwgt_header(tmp_path):
     output_base = tmp_path / "split_weighted.lhe"
 
     code, message = split_lhe_file(
-        "references/files/pylhe-testlhef3.lhe",
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         str(output_base),
         num_events=1,
         rwgt=False,

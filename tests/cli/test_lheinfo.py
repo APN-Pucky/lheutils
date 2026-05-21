@@ -4,7 +4,7 @@ from lheutils.cli.lheinfo import get_lheinfo
 
 
 def test_get_lheinfo_reports_initrwgt_weight_groups():
-    info = get_lheinfo("references/files/pylhe-testlhef3.lhe")
+    info = get_lheinfo(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
 
     assert info.weight_groups == {"scale_variation": 9}
 

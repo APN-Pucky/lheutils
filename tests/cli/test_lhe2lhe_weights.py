@@ -92,7 +92,7 @@ def test_convert_lhe_file_rejects_duplicate_weight_ids(tmp_path, kwargs):
     output_file = tmp_path / "duplicate_weight.lhe"
 
     retcode, message = convert_lhe_file(
-        "references/files/pylhe-testlhef3.lhe",
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         str(output_file),
         rwgt=False,
         weights=True,
@@ -104,7 +104,7 @@ def test_convert_lhe_file_rejects_duplicate_weight_ids(tmp_path, kwargs):
 
 
 def test_convert_lhe_file_only_weight_id_filters_initrwgt_and_events(tmp_path):
-    input_file = "references/files/pylhe-testlhef3.lhe"
+    input_file = skhep_testdata.data_path("pylhe-testlhef3.lhe")
     output_file = tmp_path / "only_weight_id.lhe"
     expected_weights = [
         event.weights["1002"]

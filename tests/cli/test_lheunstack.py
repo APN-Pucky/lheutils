@@ -6,7 +6,7 @@ from lheutils.cli.lheunstack import lhe_unstack
 
 def test_lhe_unstack_preserves_initrwgt_header(tmp_path):
     output_file = tmp_path / "split_proc66.lhe"
-    split_files = lhe_unstack("references/files/pylhe-testlhef3.lhe")
+    split_files = lhe_unstack(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
 
     assert len(split_files) == 1
 

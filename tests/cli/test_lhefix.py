@@ -11,7 +11,7 @@ def test_fix_file_preserves_initrwgt_header_when_writing_file(tmp_path, capsys):
     input_file = tmp_path / "input_weighted.lhe"
     output_suffix = ".fixed.lhe"
     input_file.write_text(
-        Path("references/files/pylhe-testlhef3.lhe").read_text(),
+        Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text(),
         encoding="utf-8",
     )
 

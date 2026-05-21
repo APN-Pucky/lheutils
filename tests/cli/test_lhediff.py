@@ -44,8 +44,8 @@ def test_lhediff_different_file():
 
 def test_lhediff_same_weighted_file_has_no_diffs():
     result = diff_lhe_files(
-        "references/files/pylhe-testlhef3.lhe",
-        "references/files/pylhe-testlhef3.lhe",
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         events=False,
     )
 
@@ -53,7 +53,7 @@ def test_lhediff_same_weighted_file_has_no_diffs():
 
 
 def test_lhediff_detects_initrwgt_weight_change(tmp_path):
-    original = Path("references/files/pylhe-testlhef3.lhe")
+    original = Path(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
     modified = tmp_path / "modified_weights.lhe"
     modified.write_text(
         original.read_text().replace(

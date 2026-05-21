@@ -9,8 +9,8 @@ def test_merge_lhe_files_preserves_initrwgt_header(tmp_path):
 
     code, message = merge_lhe_files(
         [
-            "references/files/pylhe-testlhef3.lhe",
-            "references/files/pylhe-testlhef3.lhe",
+            skhep_testdata.data_path("pylhe-testlhef3.lhe"),
+            skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         ],
         output_file=str(output_file),
         rwgt=False,

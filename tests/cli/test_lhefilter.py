@@ -8,7 +8,7 @@ def test_filter_lhe_file_preserves_initrwgt_header(tmp_path):
     output_file = tmp_path / "filtered_weighted.lhe"
 
     filter_lhe_file(
-        input_file="references/files/pylhe-testlhef3.lhe",
+        input_file=skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         rwgt=False,
         weights=True,
         output_file=str(output_file),
