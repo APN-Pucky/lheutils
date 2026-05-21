@@ -148,15 +148,32 @@ def diff_lhe_init(
         attributes1: dict[str, str],
         attributes2: dict[str, str],
     ) -> None:
+        if attributes1 == attributes2:
+            return
+
         if len(attributes1) != len(attributes2):
             diffs[f"{prefix}_num_attrib"] = LHEDiff(
                 old=len(attributes1), new=len(attributes2)
             )
-        for (k1, v1), (k2, v2) in zip(attributes1.items(), attributes2.items()):
-            if k1 != k2:
-                diffs[f"{prefix}_attrib_key_{k1}"] = LHEDiff(old=k1, new=k2)
-            if v1 != v2:
-                diffs[f"{prefix}_attrib_value_{k1}"] = LHEDiff(old=v1, new=v2)
+
+        for key in sorted(set(attributes1) | set(attributes2)):
+            in_attributes1 = key in attributes1
+            in_attributes2 = key in attributes2
+
+            if not in_attributes1 or not in_attributes2:
+                diffs[f"{prefix}_attrib_key_{key}"] = LHEDiff(
+                    old=key if in_attributes1 else None,
+                    new=key if in_attributes2 else None,
+                )
+                diffs[f"{prefix}_attrib_value_{key}"] = LHEDiff(
+                    old=attributes1.get(key), new=attributes2.get(key)
+                )
+                continue
+
+            if attributes1[key] != attributes2[key]:
+                diffs[f"{prefix}_attrib_value_{key}"] = LHEDiff(
+                    old=attributes1[key], new=attributes2[key]
+                )
 
     def _weight_group_name(
         weight_group: pylhe.LHEInitRWGTWeightGroup,
