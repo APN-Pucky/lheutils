@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pylhe
 import skhep_testdata
 

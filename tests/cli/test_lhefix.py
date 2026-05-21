@@ -36,9 +36,7 @@ def test_fix_file_preserves_initrwgt_header_when_writing_file(tmp_path, capsys):
     assert len(entry.weights) == 9
 
 
-def test_fix_file_preserves_comment_and_root_attributes_on_stdout(
-    monkeypatch, capsys
-):
+def test_fix_file_preserves_comment_and_root_attributes_on_stdout(monkeypatch, capsys):
     input_file = skhep_testdata.data_path("pylhe-testfile-pr29.lhe")
 
     with open(input_file, encoding="utf-8") as handle:

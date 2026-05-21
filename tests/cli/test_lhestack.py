@@ -17,7 +17,9 @@ def test_check_init_consistency_accepts_matching_initrwgt():
 def test_check_init_consistency_rejects_different_initrwgt(tmp_path, capsys):
     modified = tmp_path / "modified_weights.lhe"
     modified.write_text(
-        Path("references/files/pylhe-testlhef3.lhe").read_text().replace(
+        Path("references/files/pylhe-testlhef3.lhe")
+        .read_text()
+        .replace(
             "muR=0.10000E+01 muF=0.20000E+01",
             "changed initrwgt weight",
             1,

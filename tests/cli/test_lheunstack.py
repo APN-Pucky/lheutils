@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pylhe
 import skhep_testdata
 
@@ -26,7 +24,9 @@ def test_lhe_unstack_preserves_initrwgt_header(tmp_path):
 
 
 def test_lhe_unstack_splits_multi_process_file():
-    input_file = skhep_testdata.data_path("pylhe-testfile-madgraph-2.2.1-Z-ckkwl.lhe.gz")
+    input_file = skhep_testdata.data_path(
+        "pylhe-testfile-madgraph-2.2.1-Z-ckkwl.lhe.gz"
+    )
     split_files = lhe_unstack(input_file)
 
     proc_ids = [split_file.init.procInfo[0].procId for split_file in split_files]
@@ -35,6 +35,4 @@ def test_lhe_unstack_splits_multi_process_file():
     for split_file in split_files:
         target_proc_id = split_file.init.procInfo[0].procId
         assert len(split_file.init.procInfo) == 1
-        assert all(
-            event.eventinfo.pid == target_proc_id for event in split_file.events
-        )
+        assert all(event.eventinfo.pid == target_proc_id for event in split_file.events)
