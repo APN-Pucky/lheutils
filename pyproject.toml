@@ -37,8 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "xmlschema",
-    "pylhe>=1.0.0",
-    "pylhe<2.0.0",
+    "pylhe>=2.0.0",
     "typing-extensions>=4.0.0",
 ]
 
