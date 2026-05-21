@@ -10,14 +10,105 @@ import argparse
 import signal
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser, get_max_weight_index
+from lheutils.cli.util import create_base_parser
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+
+def _ensure_header(lhefile: pylhe.LHEFile) -> pylhe.LHEHeader:
+    """Ensure the LHE file has a header so initrwgt entries can be stored."""
+    if lhefile.header is None:
+        lhefile.header = pylhe.LHEHeader(initrwgt=pylhe.LHEInitRWGT())
+    return lhefile.header
+
+
+def _find_weight_group(
+    initrwgt: pylhe.LHEInitRWGT,
+    group_name: str,
+) -> pylhe.LHEInitRWGTWeightGroup | None:
+    """Find a matching weight group by name or legacy type attribute."""
+    for entry in initrwgt.entries:
+        if not isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
+            continue
+        if entry.name == group_name or entry.attributes.get("type") == group_name:
+            return entry
+    return None
+
+
+def _find_weight_location(initrwgt: pylhe.LHEInitRWGT, weight_id: str) -> str | None:
+    """Return where a weight ID already exists, if present."""
+    for entry in initrwgt.entries:
+        if isinstance(entry, pylhe.LHEInitRWGTWeight):
+            if entry.id == weight_id:
+                return "<initrwgt>"
+            continue
+
+        for weight in entry.weights:
+            if weight.id == weight_id:
+                group_name = entry.name or entry.attributes.get("type", "")
+                if group_name:
+                    return f"weight group '{group_name}'"
+                return "<initrwgt>"
+    return None
+
+
+def _add_initrwgt_weight(
+    lhefile: pylhe.LHEFile,
+    group_name: str,
+    weight_id: str,
+    weight_text: str,
+) -> str | None:
+    """Add a weight definition to the initrwgt header block."""
+    header = _ensure_header(lhefile)
+    existing_location = _find_weight_location(header.initrwgt, weight_id)
+    if existing_location is not None:
+        return f"Error: Weight ID '{weight_id}' already exists in {existing_location}"
+
+    group = _find_weight_group(header.initrwgt, group_name)
+    weight = pylhe.LHEInitRWGTWeight(
+        id=weight_id,
+        name=weight_text,
+        attrib={"id": weight_id},
+    )
+
+    if group is None:
+        group = pylhe.LHEInitRWGTWeightGroup(
+            weights=[],
+            attrib={"name": group_name},
+        )
+        header.initrwgt.entries.append(group)
+
+    group.weights.append(weight)
+    return None
+
+
+def _keep_only_weight_definition(
+    lhefile: pylhe.LHEFile,
+    only_weight_id: str,
+) -> None:
+    """Keep only the requested initrwgt weight definition."""
+    if lhefile.header is None:
+        return
+
+    kept_entries: list[pylhe.InitRWGTEntry] = []
+    for entry in lhefile.header.initrwgt.entries:
+        if isinstance(entry, pylhe.LHEInitRWGTWeight):
+            if entry.id == only_weight_id:
+                kept_entries.append(entry)
+            continue
+
+        kept_weights = [weight for weight in entry.weights if weight.id == only_weight_id]
+        if kept_weights:
+            entry.weights = kept_weights
+            kept_entries.append(entry)
+
+    lhefile.header.initrwgt.entries = kept_entries
 
 
 def convert_lhe_file(
@@ -47,59 +138,35 @@ def convert_lhe_file(
         else:
             lhefile = pylhe.LHEFile.fromfile(input_file)
 
+        output_lhefile = pylhe.LHEFile(
+            init=lhefile.init,
+            header=deepcopy(lhefile.header),
+            comment=lhefile.comment,
+            attributes=lhefile.attributes.copy(),
+        )
+
         if add_initrwgt:
-            index = get_max_weight_index(lhefile.init)
             for group_name, weight_id, weight_text in add_initrwgt:
-                for wg in lhefile.init.weightgroup.values():
-                    if weight_id in wg.weights:
-                        return (
-                            1,
-                            f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
-                        )
-                if group_name not in lhefile.init.weightgroup:
-                    # create weight group
-                    lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
-                        attrib={"name": group_name}, weights={}
-                    )
-                if weight_id not in lhefile.init.weightgroup[group_name].weights:
-                    lhefile.init.weightgroup[group_name].weights[weight_id] = (
-                        pylhe.LHEWeightInfo(
-                            name=weight_text, attrib={"id": weight_id}, index=index + 1
-                        )
-                    )
+                error_message = _add_initrwgt_weight(
+                    output_lhefile,
+                    group_name,
+                    weight_id,
+                    weight_text,
+                )
+                if error_message is not None:
+                    return 1, error_message
         if append_lhe_weight is not None:
             group_name, weight_id, weight_text = append_lhe_weight
-            index = get_max_weight_index(lhefile.init)
-            for wg in lhefile.init.weightgroup.values():
-                if weight_id in wg.weights:
-                    return (
-                        1,
-                        f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
-                    )
-            if group_name not in lhefile.init.weightgroup:
-                # create weight group
-                lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
-                    attrib={"name": group_name}, weights={}
-                )
-            if weight_id not in lhefile.init.weightgroup[group_name].weights:
-                lhefile.init.weightgroup[group_name].weights[weight_id] = (
-                    pylhe.LHEWeightInfo(
-                        name=weight_text, attrib={"id": weight_id}, index=index + 1
-                    )
-                )
+            error_message = _add_initrwgt_weight(
+                output_lhefile,
+                group_name,
+                weight_id,
+                weight_text,
+            )
+            if error_message is not None:
+                return 1, error_message
         if only_weight_id is not None:
-            # Remove all other weights from init block
-            for wg in lhefile.init.weightgroup.values():
-                if only_weight_id in wg.weights:
-                    wg.weights = {only_weight_id: wg.weights[only_weight_id]}
-                else:
-                    wg.weights = {}
-            # Remove empty weight groups
-            lhefile.init.weightgroup = {
-                name: wg
-                for name, wg in lhefile.init.weightgroup.items()
-                if len(wg.weights) > 0
-            }
+            _keep_only_weight_definition(output_lhefile, only_weight_id)
 
         # Event loop generator with modifications if needed
         def _generator() -> Iterable[pylhe.LHEEvent]:
@@ -125,13 +192,15 @@ def convert_lhe_file(
                     1,
                     f"Error: Compression option ignored when writing to stdout (use `lhe2lhe -i {input_file} | gzip`)",
                 )
-            pylhe.LHEFile(lhefile.init, _generator()).write(
+            output_lhefile.events = _generator()
+            output_lhefile.write(
                 sys.stdout,
                 rwgt=rwgt,
                 weights=weights,
             )
         else:
-            pylhe.LHEFile(lhefile.init, _generator()).tofile(
+            output_lhefile.events = _generator()
+            output_lhefile.tofile(
                 output_file,
                 gz=compress,
                 rwgt=rwgt,

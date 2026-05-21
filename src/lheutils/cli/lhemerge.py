@@ -10,6 +10,7 @@ This ensures the merged file maintains physical consistency.
 import argparse
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
@@ -31,9 +32,9 @@ def check_init_compatibility(init_files: list[pylhe.LHEInit]) -> bool:
     if len(init_files) < 2:
         return True
 
-    reference_init = init_files[0]
+    reference_init = init_files[0].tolhe()
 
-    return all(reference_init == init for init in init_files[1:])
+    return all(reference_init == init.tolhe() for init in init_files[1:])
 
 
 def merge_lhe_files(
@@ -86,7 +87,13 @@ def merge_lhe_files(
                 yield event
 
     # Create output file
-    merged_file = pylhe.LHEFile(init=lhefiles[0].init, events=merged_events())
+    merged_file = pylhe.LHEFile(
+        init=lhefiles[0].init,
+        events=merged_events(),
+        header=deepcopy(lhefiles[0].header),
+        comment=lhefiles[0].comment,
+        attributes=lhefiles[0].attributes.copy(),
+    )
 
     # Write the merged file
     if output_file:

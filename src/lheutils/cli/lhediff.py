@@ -121,6 +121,10 @@ class LHEInitDiff:
 def diff_lhe_init(
     lhei1: pylhe.LHEInit,
     lhei2: pylhe.LHEInit,
+    lheh1: pylhe.LHEHeader | None,
+    lheh2: pylhe.LHEHeader | None,
+    version1: str,
+    version2: str,
     check_init: bool,
     check_weights: bool,
     absolute_tolerance: float,
@@ -138,6 +142,94 @@ def diff_lhe_init(
         relative_tolerance: Relative tolerance for numeric comparisons
     """
     diffs = {}
+
+    def _diff_attributes(
+        prefix: str,
+        attributes1: dict[str, str],
+        attributes2: dict[str, str],
+    ) -> None:
+        if len(attributes1) != len(attributes2):
+            diffs[f"{prefix}_num_attrib"] = LHEDiff(
+                old=len(attributes1), new=len(attributes2)
+            )
+        for (k1, v1), (k2, v2) in zip(attributes1.items(), attributes2.items()):
+            if k1 != k2:
+                diffs[f"{prefix}_attrib_key_{k1}"] = LHEDiff(old=k1, new=k2)
+            if v1 != v2:
+                diffs[f"{prefix}_attrib_value_{k1}"] = LHEDiff(old=v1, new=v2)
+
+    def _weight_group_name(
+        weight_group: pylhe.LHEInitRWGTWeightGroup,
+        index: int,
+    ) -> str:
+        return weight_group.name or weight_group.attributes.get("type", f"group_{index}")
+
+    def _diff_weight_list(
+        prefix: str,
+        weights1: list[pylhe.LHEInitRWGTWeight],
+        weights2: list[pylhe.LHEInitRWGTWeight],
+    ) -> None:
+        if len(weights1) != len(weights2):
+            diffs[f"{prefix}_num_weights"] = LHEDiff(
+                old=len(weights1), new=len(weights2)
+            )
+        for index, (weight1, weight2) in enumerate(zip(weights1, weights2), start=1):
+            weight_key = weight1.id or f"weight_{index}"
+            if weight1.id != weight2.id:
+                diffs[f"{prefix}_weight_key_{weight_key}"] = LHEDiff(
+                    old=weight1.id, new=weight2.id
+                )
+            if weight1.name != weight2.name:
+                diffs[f"{prefix}_weight_{weight_key}_name"] = LHEDiff(
+                    old=weight1.name, new=weight2.name
+                )
+            _diff_attributes(
+                f"{prefix}_weight_{weight_key}",
+                weight1.attributes,
+                weight2.attributes,
+            )
+
+    def _diff_initrwgt() -> None:
+        entries1 = [] if lheh1 is None else lheh1.initrwgt.entries
+        entries2 = [] if lheh2 is None else lheh2.initrwgt.entries
+
+        weight_groups1 = [
+            entry
+            for entry in entries1
+            if isinstance(entry, pylhe.LHEInitRWGTWeightGroup)
+        ]
+        weight_groups2 = [
+            entry
+            for entry in entries2
+            if isinstance(entry, pylhe.LHEInitRWGTWeightGroup)
+        ]
+        if len(weight_groups1) != len(weight_groups2):
+            diffs["num_weight_groups"] = LHEDiff(
+                old=len(weight_groups1), new=len(weight_groups2)
+            )
+
+        for index, (wg1, wg2) in enumerate(zip(weight_groups1, weight_groups2), start=1):
+            group_name = _weight_group_name(wg1, index)
+            group_name2 = _weight_group_name(wg2, index)
+            if group_name != group_name2:
+                diffs[f"weight_group_key_{group_name}"] = LHEDiff(
+                    old=group_name, new=group_name2
+                )
+            _diff_attributes(f"weight_group_{group_name}", wg1.attributes, wg2.attributes)
+            _diff_weight_list(f"weight_group_{group_name}", wg1.weights, wg2.weights)
+
+        direct_weights1 = [
+            entry for entry in entries1 if isinstance(entry, pylhe.LHEInitRWGTWeight)
+        ]
+        direct_weights2 = [
+            entry for entry in entries2 if isinstance(entry, pylhe.LHEInitRWGTWeight)
+        ]
+        if len(direct_weights1) != len(direct_weights2):
+            diffs["num_initrwgt_weights"] = LHEDiff(
+                old=len(direct_weights1), new=len(direct_weights2)
+            )
+        _diff_weight_list("initrwgt", direct_weights1, direct_weights2)
+
     if check_init:
         if lhei1.initInfo.beamA != lhei2.initInfo.beamA:
             diffs["beamA"] = LHEDiff(old=lhei1.initInfo.beamA, new=lhei2.initInfo.beamA)
@@ -221,65 +313,10 @@ def diff_lhe_init(
                 )
 
         if check_weights:
-            if len(lhei1.weightgroup) != len(lhei2.weightgroup):
-                diffs["num_weight_groups"] = LHEDiff(
-                    old=len(lhei1.weightgroup), new=len(lhei2.weightgroup)
-                )
-            for (nwg1, wg1), (nwg2, wg2) in zip(
-                lhei1.weightgroup.items(), lhei2.weightgroup.items()
-            ):
-                if nwg1 != nwg2:
-                    diffs[f"weight_group_key_{nwg1}"] = LHEDiff(old=nwg1, new=nwg2)
-                if len(wg1.attrib) != len(wg2.attrib):
-                    diffs[f"weight_group_{nwg1}_num_attrib"] = LHEDiff(
-                        old=len(wg1.attrib), new=len(wg2.attrib)
-                    )
-                for (k1, v1), (k2, v2) in zip(wg1.attrib.items(), wg2.attrib.items()):
-                    if k1 != k2:
-                        diffs[f"weight_group_{nwg1}_attrib_key_{k1}"] = LHEDiff(
-                            old=k1, new=k2
-                        )
-                    if v1 != v2:
-                        diffs[f"weight_group_{nwg1}_attrib_value_{k1}"] = LHEDiff(
-                            old=v1, new=v2
-                        )
-                if len(wg1.weights) != len(wg2.weights):
-                    diffs[f"weight_group_{nwg1}_num_weights"] = LHEDiff(
-                        old=len(wg1.weights), new=len(wg2.weights)
-                    )
-                for (n1, lhewi1), (n2, lhwi2) in zip(
-                    wg1.weights.items(), wg2.weights.items()
-                ):
-                    if n1 != n2:
-                        diffs[f"weight_group_{nwg1}_weight_key_{n1}"] = LHEDiff(
-                            old=n1, new=n2
-                        )
-                    if lhewi1.name != lhwi2.name:
-                        diffs[f"weight_group_{nwg1}_weight_{n1}_name"] = LHEDiff(
-                            old=lhewi1.name, new=lhwi2.name
-                        )
-                    if lhewi1.index != lhwi2.index:
-                        diffs[f"weight_group_{nwg1}_weight_{n1}_index"] = LHEDiff(
-                            old=lhewi1.index, new=lhwi2.index
-                        )
-                    if len(lhewi1.attrib) != len(lhwi2.attrib):
-                        diffs[f"weight_group_{nwg1}_weight_{n1}_num_attrib"] = LHEDiff(
-                            old=len(lhewi1.attrib), new=len(lhwi2.attrib)
-                        )
-                    for (ak1, av1), (ak2, av2) in zip(
-                        lhewi1.attrib.items(), lhwi2.attrib.items()
-                    ):
-                        if ak1 != ak2:
-                            diffs[
-                                f"weight_group_{nwg1}_weight_{n1}_attrib_key_{ak1}"
-                            ] = LHEDiff(old=ak1, new=ak2)
-                        if av1 != av2:
-                            diffs[
-                                f"weight_group_{nwg1}_weight_{n1}_attrib_value_{ak1}"
-                            ] = LHEDiff(old=av1, new=av2)
+            _diff_initrwgt()
 
-        if lhei1.LHEVersion != lhei2.LHEVersion:
-            diffs["LHEVersion"] = LHEDiff(old=lhei1.LHEVersion, new=lhei2.LHEVersion)
+        if version1 != version2:
+            diffs["LHEVersion"] = LHEDiff(old=version1, new=version2)
 
     return LHEInitDiff(diffs=diffs)
 
@@ -454,7 +491,16 @@ def diff_lhe_files(
     lhefile2 = pylhe.LHEFile.fromfile(file2)
 
     lheinitdiff = diff_lhe_init(
-        lhefile1.init, lhefile2.init, init, weights, abs_tol, rel_tol
+        lhefile1.init,
+        lhefile2.init,
+        lhefile1.header,
+        lhefile2.header,
+        lhefile1.version,
+        lhefile2.version,
+        init,
+        weights,
+        abs_tol,
+        rel_tol,
     )
     lheeventdiff = diff_lhe_events(
         lhefile1.events, lhefile2.events, events, abs_tol, rel_tol

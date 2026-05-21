@@ -197,6 +197,31 @@ class LHEInfo:
         )
 
 
+def get_weight_groups(lhefile: pylhe.LHEFile) -> dict[str, int]:
+    """Collect initrwgt weight-group counts, with a bucket for direct weights."""
+    if lhefile.header is None:
+        return {}
+
+    weight_groups: dict[str, int] = {}
+    direct_weight_count = 0
+
+    for index, entry in enumerate(lhefile.header.initrwgt.entries, start=1):
+        if isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
+            group_name = (
+                entry.name
+                or entry.attributes.get("type")
+                or f"weight_group_{index}"
+            )
+            weight_groups[group_name] = len(entry.weights)
+        else:
+            direct_weight_count += 1
+
+    if direct_weight_count:
+        weight_groups["<initrwgt>"] = direct_weight_count
+
+    return weight_groups
+
+
 # TODO add weight variance
 def get_lheinfo(
     filepath_or_fileobj: Union[str, TextIO], channels: bool = False
@@ -254,9 +279,7 @@ def get_lheinfo(
         beamB=init_info.beamB,
         energyB=init_info.energyB,
         pdfB=init_info.PDFsetB,
-        weight_groups={
-            name: len(wg.weights) for name, wg in lhefile.init.weightgroup.items()
-        },
+        weight_groups=get_weight_groups(lhefile),
         num_events=num_events,
         negative_weighted_events=num_negative_weighted_events,
         process_info=[

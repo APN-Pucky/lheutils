@@ -73,12 +73,18 @@ def fix_file(
                         f"{filepath} fixed: processed {event_count} events -> {output_path}"
                     )
 
+        fixed_lhefile = pylhe.LHEFile(
+            init=lhefile.init,
+            events=_generator(),
+            header=lhefile.header,
+            comment=lhefile.comment,
+            attributes=lhefile.attributes.copy(),
+        )
+
         # Handle output
         if filepath is None:
             # Write to stdout
-            pylhe.LHEFile(init=lhefile.init, events=_generator()).write(
-                sys.stdout, rwgt=rwgt, weights=weights
-            )
+            fixed_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
         else:
             # Write to file with atomic replacement
             temp_fd, temp_path = tempfile.mkstemp(
@@ -96,9 +102,7 @@ def fix_file(
                 os.chmod(temp_path, original_stat.st_mode)
 
                 # Write to temporary file
-                pylhe.LHEFile(init=lhefile.init, events=_generator()).tofile(
-                    temp_path, gz=compress, rwgt=rwgt, weights=weights
-                )
+                fixed_lhefile.tofile(temp_path, gz=compress, rwgt=rwgt, weights=weights)
 
                 # Atomically replace/create output file with temporary file
                 os.replace(temp_path, output_path)

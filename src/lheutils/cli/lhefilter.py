@@ -184,7 +184,13 @@ def filter_lhe_file(
                 event_count += 1
 
     # Create filtered LHE file
-    filtered_lhefile = pylhe.LHEFile(init=lhefile.init, events=_generator())
+    filtered_lhefile = pylhe.LHEFile(
+        init=lhefile.init,
+        events=_generator(),
+        header=lhefile.header,
+        comment=lhefile.comment,
+        attributes=lhefile.attributes.copy(),
+    )
 
     # Output the result
     if output_file:

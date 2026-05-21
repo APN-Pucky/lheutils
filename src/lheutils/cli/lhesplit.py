@@ -9,6 +9,7 @@ with approximately equal numbers of events distributed among them.
 import argparse
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
@@ -63,7 +64,13 @@ def split_lhe_file(
     while not exhausted:
         i += 1
         output_filename = f"{output_base.replace('.', f'_{i}.', 1)}"
-        new_file = pylhe.LHEFile(init=lhefile.init, events=_generator())
+        new_file = pylhe.LHEFile(
+            init=lhefile.init,
+            events=_generator(),
+            header=deepcopy(lhefile.header),
+            comment=lhefile.comment,
+            attributes=lhefile.attributes.copy(),
+        )
         new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
     return (
         0,
