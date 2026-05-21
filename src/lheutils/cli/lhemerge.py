@@ -36,6 +36,32 @@ def check_init_compatibility(init_files: list[pylhe.LHEInit]) -> bool:
     return all(reference_init == init.tolhe() for init in init_files[1:])
 
 
+def check_header_initrwgt_compatibility(
+    headers: list[pylhe.LHEHeader | None],
+) -> bool:
+    """
+    Check if all <header><initrwgt> blocks are identical.
+
+    Args:
+        headers: List of optional LHEHeader objects to compare
+
+    Returns:
+        True if all initrwgt sections are identical, False otherwise
+    """
+    if len(headers) < 2:
+        return True
+
+    def serialize_initrwgt(header: pylhe.LHEHeader | None) -> str:
+        if header is None or not header.initrwgt.entries:
+            return ""
+        return header.initrwgt.tolhe()
+
+    reference_initrwgt = serialize_initrwgt(headers[0])
+    return all(
+        reference_initrwgt == serialize_initrwgt(header) for header in headers[1:]
+    )
+
+
 def merge_lhe_files(
     input_files: list[str],
     output_file: str | None = None,
@@ -72,6 +98,14 @@ def merge_lhe_files(
             1,
             """Error: Input files have different initialization sections.
         All files must have identical <init> blocks to be merged.""",
+        )
+    if not check_header_initrwgt_compatibility(
+        [lhefile.header for lhefile in lhefiles]
+    ):
+        return (
+            1,
+            """Error: Input files have different initrwgt header sections.
+        All files must have identical <header><initrwgt> blocks to be merged.""",
         )
 
     total_events = 0
