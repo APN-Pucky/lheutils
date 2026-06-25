@@ -152,6 +152,8 @@ def filter_lhe_file(
     exclude_event_ranges: list[tuple[int, int]] | None = None,
     max_events: int | None = None,
     negative_weights: bool = False,
+    zero_weights: bool = False,
+    zero_weights_eps: float = 1e-12,
 ) -> None:
     """Filter an LHE file based on the given criteria."""
     # Read the input LHE file
@@ -182,6 +184,7 @@ def filter_lhe_file(
                     event_index, include_event_ranges, exclude_event_ranges
                 )
                 and (not negative_weights or event.eventinfo.weight >= 0)
+                and (not zero_weights or abs(event.eventinfo.weight) > zero_weights_eps)
             ):
                 if max_events is not None and event_count >= max_events:
                     break
@@ -414,6 +417,19 @@ Note: Multiple filters are combined with AND logic.
         action="store_true",
         help="Remove negative weight events from output",
     )
+    # Remove zero weight events
+    parser.add_argument(
+        "--zero-weights",
+        action="store_true",
+        help="Remove zero weight events from output",
+    )
+    # Epsilon for checking if weight is effectively zero
+    parser.add_argument(
+        "--zero-weights-eps",
+        type=float,
+        default=1e-12,
+        help="Epsilon for checking if weight is effectively zero (default: 1e-12)",
+    )
 
     add_weight_format_argument(parser)
 
@@ -445,6 +461,7 @@ Note: Multiple filters are combined with AND logic.
         exclude_event_ranges=args.EVENTS,
         max_events=args.max_events,
         negative_weights=args.negative_weights,
+        zero_weights=args.zero_weights,
     )
 
 
