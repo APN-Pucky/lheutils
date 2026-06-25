@@ -38,7 +38,7 @@ classifiers = [
 dependencies = [
     "xmlschema",
     #"pylhe>=2.0.0",
-    "pylhe @ git+https://github.com/scikit-hep/pylhe.git@main",
+    "pylhe @ git+https://github.com/scikit-hep/pylhe.git@lheh5_support",
     "typing-extensions>=4.0.0",
 ]
 
@@ -101,6 +101,9 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lheutils"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.mypy]
 warn_unused_configs = true
