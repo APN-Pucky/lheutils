@@ -131,3 +131,37 @@ def test_convert_lhe_file_only_weight_id_filters_initrwgt_and_events(tmp_path):
         assert weights is not None
         assert float(weights.text.strip()) == pytest.approx(expected_weight)
         assert _get_event_central_weight(event) == pytest.approx(expected_weight)
+
+
+def test_convert_lhe_file_supports_hdf5_output(tmp_path):
+    input_file = skhep_testdata.data_path("pylhe-testlhef3.lhe")
+    output_file = tmp_path / "converted.h5"
+
+    retcode, message = convert_lhe_file(
+        input_file,
+        str(output_file),
+        file_format=pylhe.LHEFileFormat.HDF5,
+    )
+
+    assert retcode == 0
+    assert message == "Conversion successful"
+
+    converted = pylhe.LHEFile.fromfile(output_file)
+    first_event = next(iter(converted.events))
+    assert output_file.exists()
+    assert len(converted.init.procInfo) == 1
+    assert first_event.eventinfo.pid == 66
+
+
+@pytest.mark.parametrize(
+    "file_format",
+    [pylhe.LHEFileFormat.GZIP, pylhe.LHEFileFormat.HDF5],
+)
+def test_convert_lhe_file_rejects_non_plain_stdout(file_format):
+    retcode, message = convert_lhe_file(
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
+        file_format=file_format,
+    )
+
+    assert retcode == 1
+    assert f"File format '{file_format.value}' requires an output file" in message

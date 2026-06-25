@@ -8,6 +8,7 @@ import lheutils
 WEIGHT_FORMAT_CHOICES = tuple(
     weight_format.value for weight_format in pylhe.LHEWeightFormat
 )
+FILE_FORMAT_CHOICES = tuple(file_format.value for file_format in pylhe.LHEFileFormat)
 
 
 def create_base_parser(**kwargs: Any) -> argparse.ArgumentParser:
@@ -47,10 +48,35 @@ def parse_weight_format(
     return pylhe.LHEWeightFormat(weight_format)
 
 
+def add_file_format_argument(
+    parser: argparse.ArgumentParser,
+    *flags: str,
+    help_text: str = "File format to use in output (default: plain)",
+) -> None:
+    """Add the shared file-format CLI argument."""
+    parser.add_argument(
+        *(flags or ("--file-format",)),
+        choices=FILE_FORMAT_CHOICES,
+        default=pylhe.LHEFileFormat.PLAIN.value,
+        help=help_text,
+    )
+
+
+def parse_file_format(
+    file_format: str | pylhe.LHEFileFormat,
+) -> pylhe.LHEFileFormat:
+    """Normalize a CLI file-format value to the pylhe enum."""
+    if isinstance(file_format, pylhe.LHEFileFormat):
+        return file_format
+    return pylhe.LHEFileFormat(file_format)
+
+
 def create_output_format(
     weight_format: pylhe.LHEWeightFormat,
-    compress: bool = False,
+    file_format: pylhe.LHEFileFormat = pylhe.LHEFileFormat.PLAIN,
+    compress: bool | None = None,
 ) -> pylhe.LHEOutputFormat:
     """Build a pylhe output-format object for writers."""
-    file_format = pylhe.LHEFileFormat.GZIP if compress else pylhe.LHEFileFormat.PLAIN
+    if compress is True:
+        file_format = pylhe.LHEFileFormat.GZIP
     return pylhe.LHEOutputFormat(weights=weight_format, file=file_format)

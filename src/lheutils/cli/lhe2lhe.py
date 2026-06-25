@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-CLI tool to convert LHE files with different compression and weight format options.
+CLI tool to convert LHE files with different file and weight format options.
 
 This tool allows you to convert Les Houches Event (LHE) files from one format
-to another, with options to change compression and weight format.
+to another, with options to change file and weight format.
 """
 
 import argparse
@@ -16,9 +16,11 @@ from pathlib import Path
 import pylhe
 
 from lheutils.cli.util import (
+    add_file_format_argument,
     add_weight_format_argument,
     create_base_parser,
     create_output_format,
+    parse_file_format,
     parse_weight_format,
 )
 
@@ -120,7 +122,7 @@ def _keep_only_weight_definition(
 def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
-    compress: bool = False,
+    file_format: pylhe.LHEFileFormat = pylhe.LHEFileFormat.PLAIN,
     weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
@@ -131,7 +133,7 @@ def convert_lhe_file(
     Args:
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
-        compress: Whether to compress the output file
+        file_format: Output file format to use when writing to a file
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
         add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
@@ -193,21 +195,27 @@ def convert_lhe_file(
 
         # Write the output file
         if output_file is None:
-            if compress:
+            if file_format is not pylhe.LHEFileFormat.PLAIN:
                 return (
                     1,
-                    f"Error: Compression option ignored when writing to stdout (use `lhe2lhe -i {input_file} | gzip`)",
+                    f"Error: File format '{file_format.value}' requires an output file (stdout supports plain text only)",
                 )
             output_lhefile.events = _generator()
             output_lhefile.write(
                 sys.stdout,
-                lheformat=create_output_format(weight_format),
+                lheformat=create_output_format(
+                    weight_format,
+                    file_format=file_format,
+                ),
             )
         else:
             output_lhefile.events = _generator()
             output_lhefile.tofile(
                 output_file,
-                lheformat=create_output_format(weight_format, compress=compress),
+                lheformat=create_output_format(
+                    weight_format,
+                    file_format=file_format,
+                ),
             )
 
     except FileNotFoundError:
@@ -223,19 +231,25 @@ def convert_lhe_file(
 def main() -> None:
     """Main CLI function."""
     parser = create_base_parser(
-        description="Convert LHE files with different compression and weight format options",
+        description="Convert LHE files with different file and weight format options",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   lhe2lhe -i input.lhe                                    # Convert to stdout
   lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
-  lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Compress output
+  lhe2lhe -i input.lhe -o output.lhe.gz --file-format gzip # Gzip output
+  lhe2lhe -i input.lhe -o output.h5 --file-format hdf5  # HDF5/LHEH5 output
   lhe2lhe -i input.lhe -o output.lhe --weight-format weights # Use weights format
   lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
-  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Short options
+  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Legacy gzip shorthand
   lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
   cat input.lhe | lhe2lhe                                 # Convert from stdin to stdout
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
+
+File formats:
+  plain - Plain-text LHE output (default)
+  gzip  - Gzip-compressed LHE output
+  hdf5  - HDF5-based LHEH5 output
 
 Weight formats:
   rwgt    - Include weights in an <rwgt> block (default)
@@ -249,11 +263,13 @@ Weight formats:
     )
     parser.add_argument("--output", "-o", help="Output LHE file (default: stdout)")
 
+    add_file_format_argument(parser)
+
     parser.add_argument(
         "--compress",
         "-c",
-        action=argparse.BooleanOptionalAction,
-        help="Compress the output file (ignored if output filename ends with .gz/.gzip)",
+        action="store_true",
+        help="Write gzip output (legacy alias for `--file-format gzip`)",
         default=False,
     )
 
@@ -287,6 +303,12 @@ Weight formats:
 
     args = parser.parse_args()
 
+    file_format = parse_file_format(args.file_format)
+    if args.compress:
+        if file_format is pylhe.LHEFileFormat.HDF5:
+            parser.error("--compress cannot be combined with --file-format hdf5")
+        file_format = pylhe.LHEFileFormat.GZIP
+
     # Validate input file exists (skip validation for stdin)
     if args.input != "-":
         input_path = Path(args.input)
@@ -301,13 +323,13 @@ Weight formats:
 
     # Perform the conversion
     retcode, message = convert_lhe_file(
-        args.input,
-        args.output,
-        args.compress,
-        parse_weight_format(args.weight_format),
-        args.append_lhe_weight,
-        args.only_weight_id,
-        args.add_initrwgt,
+        input_file=args.input,
+        output_file=args.output,
+        file_format=file_format,
+        weight_format=parse_weight_format(args.weight_format),
+        append_lhe_weight=args.append_lhe_weight,
+        only_weight_id=args.only_weight_id,
+        add_initrwgt=args.add_initrwgt,
     )
     if retcode != 0:
         print(message, file=sys.stderr)
