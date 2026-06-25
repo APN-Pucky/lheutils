@@ -10,7 +10,7 @@ import argparse
 import sys
 import warnings
 from pathlib import Path
-from typing import TextIO, Union
+from typing import TextIO
 
 import pylhe
 
@@ -18,7 +18,7 @@ from lheutils.cli.util import create_base_parser
 
 
 def show_event(
-    filepath_or_fileobj: Union[str, TextIO],
+    filepath_or_fileobj: str | TextIO,
     event_number: int,
     file_inputs_count: int = 1,
 ) -> None:
@@ -70,9 +70,7 @@ def show_event(
         sys.exit(1)
 
 
-def show_init(
-    filepath_or_fileobj: Union[str, TextIO], file_inputs_count: int = 1
-) -> None:
+def show_init(filepath_or_fileobj: str | TextIO, file_inputs_count: int = 1) -> None:
     """Show the init block from an LHE file.
 
     Args:
@@ -129,7 +127,7 @@ Examples:
     # Check if reading from stdin
     use_stdin = not args.files and not sys.stdin.isatty()
 
-    file_inputs: list[Union[str, TextIO]] = []
+    file_inputs: list[str | TextIO] = []
     if use_stdin:
         # Read from stdin
         file_inputs += [sys.stdin]
