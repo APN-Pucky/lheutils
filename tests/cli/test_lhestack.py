@@ -41,9 +41,7 @@ def test_stack_lhe_files_preserves_initrwgt_header(tmp_path):
     first = tmp_path / "first.lhe"
     second = tmp_path / "second.lhe"
     first.write_text(Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text())
-    second.write_text(
-        Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text()
-    )
+    second.write_text(Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text())
 
     output_file = tmp_path / "stacked.lhe"
     stack_lhe_files([str(first), str(second)], str(output_file), new_ids=True)
