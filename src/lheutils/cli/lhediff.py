@@ -152,7 +152,9 @@ def diff_lhe_init(
             diffs[f"{prefix}_num_attrib"] = LHEDiff(
                 old=len(attributes1), new=len(attributes2)
             )
-        for (k1, v1), (k2, v2) in zip(attributes1.items(), attributes2.items()):
+        for (k1, v1), (k2, v2) in zip(
+            attributes1.items(), attributes2.items(), strict=True
+        ):
             if k1 != k2:
                 diffs[f"{prefix}_attrib_key_{k1}"] = LHEDiff(old=k1, new=k2)
             if v1 != v2:
@@ -175,7 +177,9 @@ def diff_lhe_init(
             diffs[f"{prefix}_num_weights"] = LHEDiff(
                 old=len(weights1), new=len(weights2)
             )
-        for index, (weight1, weight2) in enumerate(zip(weights1, weights2), start=1):
+        for index, (weight1, weight2) in enumerate(
+            zip(weights1, weights2, strict=True), start=1
+        ):
             weight_key = weight1.id or f"weight_{index}"
             if weight1.id != weight2.id:
                 diffs[f"{prefix}_weight_key_{weight_key}"] = LHEDiff(
@@ -211,7 +215,7 @@ def diff_lhe_init(
             )
 
         for index, (wg1, wg2) in enumerate(
-            zip(weight_groups1, weight_groups2), start=1
+            zip(weight_groups1, weight_groups2, strict=True), start=1
         ):
             group_name = _weight_group_name(wg1, index)
             group_name2 = _weight_group_name(wg2, index)
@@ -285,7 +289,7 @@ def diff_lhe_init(
                 old=lhei1.initInfo.numProcesses, new=lhei2.initInfo.numProcesses
             )
 
-        for proc1, proc2 in zip(lhei1.procInfo, lhei2.procInfo):
+        for proc1, proc2 in zip(lhei1.procInfo, lhei2.procInfo, strict=True):
             if not math.isclose(
                 proc1.xSection,
                 proc2.xSection,
@@ -410,7 +414,7 @@ def diff_lhe_events(
                     old=len(event1.particles), new=len(event2.particles)
                 )
             for i, (p1, p2) in enumerate(
-                zip(event1.particles, event2.particles), start=1
+                zip(event1.particles, event2.particles, strict=True), start=1
             ):
                 if p1.id != p2.id:
                     diffs[f"event_{j}_particle_{i}_id"] = LHEDiff(old=p1.id, new=p2.id)
