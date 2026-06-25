@@ -122,7 +122,8 @@ def _keep_only_weight_definition(
 def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
-    file_format: pylhe.LHEFileFormat = pylhe.LHEFileFormat.PLAIN,
+    file_format: str = "xml",
+    compress: bool = False,
     weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
@@ -134,6 +135,7 @@ def convert_lhe_file(
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
         file_format: Output file format to use when writing to a file
+        compress: Whether to compress the chosen output format
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
         add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
@@ -195,10 +197,10 @@ def convert_lhe_file(
 
         # Write the output file
         if output_file is None:
-            if file_format is not pylhe.LHEFileFormat.PLAIN:
+            if file_format != "xml" or compress:
                 return (
                     1,
-                    f"Error: File format '{file_format.value}' requires an output file (stdout supports plain text only)",
+                    "Error: Stdout only supports uncompressed XML output",
                 )
             output_lhefile.events = _generator()
             output_lhefile.write(
@@ -206,6 +208,7 @@ def convert_lhe_file(
                 lheformat=create_output_format(
                     weight_format,
                     file_format=file_format,
+                    compress=compress,
                 ),
             )
         else:
@@ -215,6 +218,7 @@ def convert_lhe_file(
                 lheformat=create_output_format(
                     weight_format,
                     file_format=file_format,
+                    compress=compress,
                 ),
             )
 
@@ -237,18 +241,18 @@ def main() -> None:
 Examples:
   lhe2lhe -i input.lhe                                    # Convert to stdout
   lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
-  lhe2lhe -i input.lhe -o output.lhe.gz --file-format gzip # Gzip output
+  lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Gzip-compressed XML output
   lhe2lhe -i input.lhe -o output.h5 --file-format hdf5  # HDF5/LHEH5 output
+  lhe2lhe -i input.lhe -o output.h5 --file-format hdf5 --compress # HDF5 with gzip-compressed datasets
   lhe2lhe -i input.lhe -o output.lhe --weight-format weights # Use weights format
   lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
-  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Legacy gzip shorthand
+  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # XML with gzip compression
   lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
   cat input.lhe | lhe2lhe                                 # Convert from stdin to stdout
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
 File formats:
-  plain - Plain-text LHE output (default)
-  gzip  - Gzip-compressed LHE output
+  xml   - XML/LHE output (default)
   hdf5  - HDF5-based LHEH5 output
 
 Weight formats:
@@ -269,7 +273,7 @@ Weight formats:
         "--compress",
         "-c",
         action="store_true",
-        help="Write gzip output (legacy alias for `--file-format gzip`)",
+        help="Compress the selected output format (gzip for XML, gzip-compressed datasets for HDF5)",
         default=False,
     )
 
@@ -304,10 +308,6 @@ Weight formats:
     args = parser.parse_args()
 
     file_format = parse_file_format(args.file_format)
-    if args.compress:
-        if file_format is pylhe.LHEFileFormat.HDF5:
-            parser.error("--compress cannot be combined with --file-format hdf5")
-        file_format = pylhe.LHEFileFormat.GZIP
 
     # Validate input file exists (skip validation for stdin)
     if args.input != "-":
@@ -326,6 +326,7 @@ Weight formats:
         input_file=args.input,
         output_file=args.output,
         file_format=file_format,
+        compress=args.compress,
         weight_format=parse_weight_format(args.weight_format),
         append_lhe_weight=args.append_lhe_weight,
         only_weight_id=args.only_weight_id,

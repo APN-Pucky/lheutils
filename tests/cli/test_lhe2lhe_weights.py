@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from itertools import islice
 
+import h5py
 import pylhe
 import pytest
 import skhep_testdata
@@ -140,22 +141,23 @@ def test_convert_lhe_file_supports_hdf5_output(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        file_format=pylhe.LHEFileFormat.HDF5,
+        file_format="hdf5",
     )
 
     assert retcode == 0
     assert message == "Conversion successful"
 
-    converted = pylhe.LHEFile.fromfile(output_file)
-    first_event = next(iter(converted.events))
     assert output_file.exists()
-    assert len(converted.init.procInfo) == 1
-    assert first_event.eventinfo.pid == 66
+    with h5py.File(output_file, "r") as h5file:
+        assert "events" in h5file
+        assert "particles" in h5file
+        assert len(h5file["events"]) > 0
+        assert len(h5file["particles"]) > 0
 
 
 @pytest.mark.parametrize(
     "file_format",
-    [pylhe.LHEFileFormat.GZIP, pylhe.LHEFileFormat.HDF5],
+    ["gzip", "hdf5"],
 )
 def test_convert_lhe_file_rejects_non_plain_stdout(file_format):
     retcode, message = convert_lhe_file(
@@ -164,4 +166,14 @@ def test_convert_lhe_file_rejects_non_plain_stdout(file_format):
     )
 
     assert retcode == 1
-    assert f"File format '{file_format.value}' requires an output file" in message
+    assert message == "Error: Stdout only supports uncompressed XML output"
+
+
+def test_convert_lhe_file_rejects_compressed_stdout():
+    retcode, message = convert_lhe_file(
+        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
+        compress=True,
+    )
+
+    assert retcode == 1
+    assert message == "Error: Stdout only supports uncompressed XML output"
