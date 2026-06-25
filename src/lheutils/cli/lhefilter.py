@@ -10,11 +10,17 @@ particle PDG IDs (incoming/outgoing), and event numbers.
 import argparse
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
 def matches_process_filter(
@@ -130,8 +136,7 @@ def matches_event_filter(
 
 def filter_lhe_file(
     input_file: str,
-    rwgt: bool,
-    weights: bool,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     output_file: str | None = None,
     process_ids: set[int] | None = None,
     exclude_process_ids: set[int] | None = None,
@@ -187,17 +192,19 @@ def filter_lhe_file(
     filtered_lhefile = pylhe.LHEFile(
         init=lhefile.init,
         events=_generator(),
-        header=lhefile.header,
+        header=deepcopy(lhefile.header),
         comment=lhefile.comment,
-        attributes=lhefile.attributes.copy(),
+        version=lhefile.version,
+        extra_attributes=lhefile.extra_attributes.copy(),
     )
+    lheformat = create_output_format(weight_format)
 
     # Output the result
     if output_file:
-        filtered_lhefile.tofile(output_file, rwgt=rwgt, weights=weights)
+        filtered_lhefile.tofile(output_file, lheformat=lheformat)
     else:
         # Write to stdout
-        filtered_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
+        filtered_lhefile.write(sys.stdout, lheformat=lheformat)
 
 
 def parse_int_list(value: str) -> set[int]:
@@ -408,12 +415,7 @@ Note: Multiple filters are combined with AND logic.
         help="Remove negative weight events from output",
     )
 
-    parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
-    )
+    add_weight_format_argument(parser)
 
     args = parser.parse_args()
 
@@ -426,9 +428,8 @@ Note: Multiple filters are combined with AND logic.
 
     # Call the filtering function
     filter_lhe_file(
-        rwgt=args.weight_format == "rwgt",
-        weights=args.weight_format == "weights",
         input_file=args.input,
+        weight_format=parse_weight_format(args.weight_format),
         output_file=args.output,
         process_ids=args.process,
         exclude_process_ids=args.PROCESS,

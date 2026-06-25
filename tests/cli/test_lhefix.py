@@ -19,8 +19,7 @@ def test_fix_file_preserves_initrwgt_header_when_writing_file(tmp_path, capsys):
         filepath=str(input_file),
         compress=False,
         suffix=output_suffix,
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
     )
 
     captured = capsys.readouterr()
@@ -41,7 +40,12 @@ def test_fix_file_preserves_comment_and_root_attributes_on_stdout(monkeypatch, c
 
     with open(input_file, encoding="utf-8") as handle:
         monkeypatch.setattr(sys, "stdin", handle)
-        fix_file(None, compress=False, suffix=None, rwgt=True, weights=False)
+        fix_file(
+            None,
+            compress=False,
+            suffix=None,
+            weight_format=pylhe.LHEWeightFormat.RWGT,
+        )
 
     output = capsys.readouterr().out
     assert output.startswith('<LesHouchesEvents version="1.0">')

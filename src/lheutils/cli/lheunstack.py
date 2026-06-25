@@ -42,7 +42,8 @@ def lhe_unstack(lhefile_path: str) -> list[pylhe.LHEFile]:
             events=_events_for_process(proc_info.procId),
             header=deepcopy(lhefile.header),
             comment=lhefile.comment,
-            attributes=lhefile.attributes.copy(),
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
         )
         result_files.append(newlhef)
 

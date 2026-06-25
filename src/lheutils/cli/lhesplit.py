@@ -14,15 +14,19 @@ from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
 def split_lhe_file(
     input_file: str,
     output_base: str,
     num_events: int,
-    rwgt: bool = True,
-    weights: bool = False,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
 ) -> tuple[int, str]:
     """
     Split an LHE file into multiple output files.
@@ -31,8 +35,7 @@ def split_lhe_file(
         input_file: Path to the input LHE file
         output_base: Base name for output files including .lhe or .lhe.gz extension
         num_events: Number of events per output file
-        rwgt: Whether to use rwgt section if present in the input file
-        weights: Whether to preserve event weights in output
+        weight_format: How to serialize event weights in output
     """
     # Read the LHE file
     try:
@@ -61,6 +64,7 @@ def split_lhe_file(
                 break
 
     i = 0
+    lheformat = create_output_format(weight_format)
     while not exhausted:
         i += 1
         output_filename = f"{output_base.replace('.', f'_{i}.', 1)}"
@@ -69,9 +73,10 @@ def split_lhe_file(
             events=_generator(),
             header=deepcopy(lhefile.header),
             comment=lhefile.comment,
-            attributes=lhefile.attributes.copy(),
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
         )
-        new_file.tofile(output_filename, rwgt=rwgt, weights=weights)
+        new_file.tofile(output_filename, lheformat=lheformat)
     return (
         0,
         f"Split events into {i} files with base name '{output_base}'.",
@@ -112,11 +117,9 @@ Examples:
         help="Number of events per output file",
     )
 
-    parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output files (default: rwgt)",
+    add_weight_format_argument(
+        parser,
+        help_text="Weight format to use in output files (default: rwgt)",
     )
 
     args = parser.parse_args()
@@ -142,8 +145,7 @@ Examples:
         args.input,
         args.output,
         args.num_events,
-        rwgt=args.weight_format == "rwgt",
-        weights=args.weight_format == "weights",
+        weight_format=parse_weight_format(args.weight_format),
     )
 
     if code != 0:

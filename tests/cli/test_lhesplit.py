@@ -11,8 +11,7 @@ def test_split_lhe_file_preserves_initrwgt_header(tmp_path):
         skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         str(output_base),
         num_events=1,
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
     )
 
     assert code == 0
@@ -35,8 +34,7 @@ def test_split_lhe_file_preserves_comment_and_root_attributes(tmp_path):
         input_file,
         str(output_base),
         num_events=1,
-        rwgt=True,
-        weights=False,
+        weight_format=pylhe.LHEWeightFormat.RWGT,
     )
 
     assert code == 0

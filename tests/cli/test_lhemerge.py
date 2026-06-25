@@ -15,8 +15,7 @@ def test_merge_lhe_files_preserves_initrwgt_header(tmp_path):
             skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         ],
         output_file=str(output_file),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
     )
 
     assert code == 0
@@ -37,8 +36,7 @@ def test_merge_lhe_files_preserves_comment_and_root_attributes_on_stdout(capsys)
     code, message = merge_lhe_files(
         [input_file, input_file],
         output_file=None,
-        rwgt=True,
-        weights=False,
+        weight_format=pylhe.LHEWeightFormat.RWGT,
     )
 
     assert code == 0
@@ -68,8 +66,7 @@ def test_merge_lhe_files_rejects_different_initrwgt(tmp_path):
     code, message = merge_lhe_files(
         [original, str(modified)],
         output_file=None,
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
     )
 
     assert code == 1

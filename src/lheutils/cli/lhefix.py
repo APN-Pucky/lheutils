@@ -11,19 +11,24 @@ import os
 import sys
 import tempfile
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
 def fix_file(
     filepath: str | None = None,
     compress: bool = False,
     suffix: str | None = None,
-    rwgt: bool = True,
-    weights: bool = False,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
 ) -> None:
     """Fix an LHE file from filepath or stdin.
 
@@ -31,8 +36,7 @@ def fix_file(
         filepath: Path to the LHE file to fix, or None to read from stdin.
         compress: Whether to gzip-compress the output file (ignored for stdin).
         suffix: Suffix to add to the output filename (ignored for stdin).
-        rwgt: Whether to preserve rwgt weights in output
-        weights: Whether to preserve event weights in output
+        weight_format: How to serialize event weights in output
     """
     try:
         # Read the input
@@ -75,15 +79,19 @@ def fix_file(
         fixed_lhefile = pylhe.LHEFile(
             init=lhefile.init,
             events=_generator(),
-            header=lhefile.header,
+            header=deepcopy(lhefile.header),
             comment=lhefile.comment,
-            attributes=lhefile.attributes.copy(),
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
         )
 
         # Handle output
         if filepath is None:
             # Write to stdout
-            fixed_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
+            fixed_lhefile.write(
+                sys.stdout,
+                lheformat=create_output_format(weight_format),
+            )
         else:
             # Write to file with atomic replacement
             temp_fd, temp_path = tempfile.mkstemp(
@@ -101,7 +109,10 @@ def fix_file(
                 os.chmod(temp_path, original_stat.st_mode)
 
                 # Write to temporary file
-                fixed_lhefile.tofile(temp_path, gz=compress, rwgt=rwgt, weights=weights)
+                fixed_lhefile.tofile(
+                    temp_path,
+                    lheformat=create_output_format(weight_format, compress=compress),
+                )
 
                 # Atomically replace/create output file with temporary file
                 os.replace(temp_path, output_path)
@@ -142,11 +153,9 @@ def main() -> None:
         default=False,
     )
 
-    parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output files (default: rwgt).",
+    add_weight_format_argument(
+        parser,
+        help_text="Weight format to use in output files (default: rwgt).",
     )
 
     parser.add_argument(
@@ -157,19 +166,18 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    rwgt = args.weight_format == "rwgt"
-    weights = args.weight_format == "weights"
+    weight_format = parse_weight_format(args.weight_format)
 
     if not args.files:
         # No files provided, read from stdin
-        fix_file(None, args.compress, args.suffix, rwgt, weights)
+        fix_file(None, args.compress, args.suffix, weight_format)
     else:
         # Fix multiple files in place
         for filepath in args.files:
             if not Path(filepath).exists():
                 print(f"Error: File not found: {filepath}", file=sys.stderr)
                 continue
-            fix_file(filepath, args.compress, args.suffix, rwgt, weights)
+            fix_file(filepath, args.compress, args.suffix, weight_format)
 
 
 if __name__ == "__main__":

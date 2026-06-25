@@ -27,8 +27,7 @@ def test_convert_lhe_file_add_initrwgt_adds_init_weight(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
         add_initrwgt=[("newgroup", "9001", "new weight")],
     )
 
@@ -57,8 +56,7 @@ def test_convert_lhe_file_append_lhe_weight_copies_central_weight(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
         append_lhe_weight=("newgroup", "9002", "copied central weight"),
     )
 
@@ -94,8 +92,7 @@ def test_convert_lhe_file_rejects_duplicate_weight_ids(tmp_path, kwargs):
     retcode, message = convert_lhe_file(
         skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         str(output_file),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
         **kwargs,
     )
 
@@ -114,8 +111,7 @@ def test_convert_lhe_file_only_weight_id_filters_initrwgt_and_events(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
         only_weight_id="1002",
     )
 

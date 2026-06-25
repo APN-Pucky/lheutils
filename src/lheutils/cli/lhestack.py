@@ -15,7 +15,12 @@ from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
 def _initrwgt_tuples(
@@ -89,8 +94,7 @@ def stack_lhe_files(
     input_files: list[str],
     output_file: str,
     new_ids: bool = False,
-    rwgt: bool = True,
-    weights: bool = False,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
 ) -> None:
     """
     Stack multiple LHE files into a single output file.
@@ -102,8 +106,7 @@ def stack_lhe_files(
         input_files: List of paths to input LHE files
         output_file: Path to the output LHE file
         new_ids: Whether to remap process IDs to ensure uniqueness
-        rwgt: Whether to preserve rwgt weights in output
-        weights: Whether to preserve event weights in output
+        weight_format: How to serialize event weights in output
     """
     # Read all input files and their initialization sections
     lhefiles: list[pylhe.LHEFile] = []
@@ -180,11 +183,15 @@ def stack_lhe_files(
         events=stacked_events(),
         header=deepcopy(reference_file.header),
         comment=reference_file.comment,
-        attributes=reference_file.attributes.copy(),
+        version=reference_file.version,
+        extra_attributes=reference_file.extra_attributes.copy(),
     )
 
     # Write the stacked file
-    stacked_file.tofile(output_file, rwgt=rwgt, weights=weights)
+    stacked_file.tofile(
+        output_file,
+        lheformat=create_output_format(weight_format),
+    )
     print(f"Successfully wrote stacked file: {output_file}")
 
 
@@ -217,12 +224,7 @@ Examples:
         "--new-ids", action="store_true", help="Remap process IDs to ensure uniqueness"
     )
 
-    parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
-    )
+    add_weight_format_argument(parser)
 
     args = parser.parse_args()
 
@@ -253,8 +255,7 @@ Examples:
         args.input_files,
         args.output_file,
         new_ids=args.new_ids,
-        rwgt=args.weight_format == "rwgt",
-        weights=args.weight_format == "weights",
+        weight_format=parse_weight_format(args.weight_format),
     )
 
 

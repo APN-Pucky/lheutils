@@ -15,7 +15,12 @@ from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -74,13 +79,12 @@ def _add_initrwgt_weight(
     weight = pylhe.LHEInitRWGTWeight(
         id=weight_id,
         name=weight_text,
-        attrib={"id": weight_id},
     )
 
     if group is None:
         group = pylhe.LHEInitRWGTWeightGroup(
+            name=group_name,
             weights=[],
-            attrib={"name": group_name},
         )
         header.initrwgt.entries.append(group)
 
@@ -117,8 +121,7 @@ def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
     compress: bool = False,
-    rwgt: bool = True,
-    weights: bool = False,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
     add_initrwgt: list[tuple[str, str, str]] | None = None,
@@ -144,7 +147,8 @@ def convert_lhe_file(
             init=lhefile.init,
             header=deepcopy(lhefile.header),
             comment=lhefile.comment,
-            attributes=lhefile.attributes.copy(),
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
         )
 
         if add_initrwgt:
@@ -197,16 +201,13 @@ def convert_lhe_file(
             output_lhefile.events = _generator()
             output_lhefile.write(
                 sys.stdout,
-                rwgt=rwgt,
-                weights=weights,
+                lheformat=create_output_format(weight_format),
             )
         else:
             output_lhefile.events = _generator()
             output_lhefile.tofile(
                 output_file,
-                gz=compress,
-                rwgt=rwgt,
-                weights=weights,
+                lheformat=create_output_format(weight_format, compress=compress),
             )
 
     except FileNotFoundError:
@@ -237,9 +238,9 @@ Examples:
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
 Weight formats:
-  rwgt      - Include weights in 'rwgt' format (default)
-  init-rwgt - Include weights in 'init-rwgt' format (both rwgt and weights)
-  none      - Exclude all weights
+  rwgt    - Include weights in an <rwgt> block (default)
+  weights - Include weights in a <weights> block
+  none    - Exclude all alternate event weights
         """,
     )
 
@@ -256,12 +257,11 @@ Weight formats:
         default=False,
     )
 
-    parser.add_argument(
+    add_weight_format_argument(
+        parser,
         "--weight-format",
         "-w",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
+        help_text="Weight format to use in output (default: rwgt)",
     )
 
     parser.add_argument(
@@ -304,8 +304,7 @@ Weight formats:
         args.input,
         args.output,
         args.compress,
-        args.weight_format == "rwgt",
-        args.weight_format == "weights",
+        parse_weight_format(args.weight_format),
         args.append_lhe_weight,
         args.only_weight_id,
         args.add_initrwgt,

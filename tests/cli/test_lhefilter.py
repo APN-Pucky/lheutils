@@ -9,8 +9,7 @@ def test_filter_lhe_file_preserves_initrwgt_header(tmp_path):
 
     filter_lhe_file(
         input_file=skhep_testdata.data_path("pylhe-testlhef3.lhe"),
-        rwgt=False,
-        weights=True,
+        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
         output_file=str(output_file),
         max_events=1,
     )
@@ -30,8 +29,7 @@ def test_filter_lhe_file_preserves_comment_and_root_attributes(tmp_path):
 
     filter_lhe_file(
         input_file=input_file,
-        rwgt=True,
-        weights=False,
+        weight_format=pylhe.LHEWeightFormat.RWGT,
         output_file=str(output_file),
         max_events=1,
     )
