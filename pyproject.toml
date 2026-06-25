@@ -37,7 +37,8 @@ classifiers = [
 ]
 dependencies = [
     "xmlschema",
-    "pylhe>=2.0.0",
+    #"pylhe>=2.0.0",
+    "pylhe @ git+https://github.com/scikit-hep/pylhe.git@main",
     "typing-extensions>=4.0.0",
 ]
 
