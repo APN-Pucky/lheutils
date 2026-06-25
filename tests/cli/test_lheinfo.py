@@ -30,18 +30,19 @@ def _set_event_weights(
     event_index = 0
 
     for line in lines:
+        updated_line = line
         if next_event_header:
             event_index += 1
             if event_index in event_weights:
-                parts = line.split()
+                parts = updated_line.split()
                 parts[2] = event_weights[event_index]
-                line = "  " + " ".join(parts)
+                updated_line = "  " + " ".join(parts)
             next_event_header = False
 
         if line.strip() == "<event>":
             next_event_header = True
 
-        updated_lines.append(line)
+        updated_lines.append(updated_line)
 
     destination_path.write_text("\n".join(updated_lines) + "\n")
 
