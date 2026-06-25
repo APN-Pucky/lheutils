@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-CLI tool to convert LHE files with different file and weight format options.
+CLI tool to convert LHE files with different output format presets.
 
 This tool allows you to convert Les Houches Event (LHE) files from one format
-to another, with options to change file and weight format.
+to another, with options to change the output format preset.
 """
 
 import argparse
@@ -16,12 +16,9 @@ from pathlib import Path
 import pylhe
 
 from lheutils.cli.util import (
-    add_file_format_argument,
-    add_weight_format_argument,
+    add_output_format_argument,
     create_base_parser,
-    create_output_format,
-    parse_file_format,
-    parse_weight_format,
+    parse_output_format,
 )
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
@@ -122,9 +119,7 @@ def _keep_only_weight_definition(
 def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
-    file_format: str = "xml",
-    compress: bool = False,
-    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
+    output_format: pylhe.LHEOutputFormat = pylhe.DEFAULT_FORMAT,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
     add_initrwgt: list[tuple[str, str, str]] | None = None,
@@ -134,8 +129,7 @@ def convert_lhe_file(
     Args:
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
-        file_format: Output file format to use when writing to a file
-        compress: Whether to compress the chosen output format
+        output_format: Output format preset to use when writing
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
         add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
@@ -197,29 +191,24 @@ def convert_lhe_file(
 
         # Write the output file
         if output_file is None:
-            if file_format != "xml" or compress:
+            if (
+                not isinstance(output_format, pylhe.LHEXMLFormat)
+                or output_format.compress
+            ):
                 return (
                     1,
-                    "Error: Stdout only supports uncompressed XML output",
+                    "Error: Stdout only supports uncompressed XML output formats",
                 )
             output_lhefile.events = _generator()
             output_lhefile.write(
                 sys.stdout,
-                lheformat=create_output_format(
-                    weight_format,
-                    file_format=file_format,
-                    compress=compress,
-                ),
+                lheformat=output_format,
             )
         else:
             output_lhefile.events = _generator()
             output_lhefile.tofile(
                 output_file,
-                lheformat=create_output_format(
-                    weight_format,
-                    file_format=file_format,
-                    compress=compress,
-                ),
+                lheformat=output_format,
             )
 
     except FileNotFoundError:
@@ -235,30 +224,31 @@ def convert_lhe_file(
 def main() -> None:
     """Main CLI function."""
     parser = create_base_parser(
-        description="Convert LHE files with different file and weight format options",
+        description="Convert LHE files with different output format presets",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   lhe2lhe -i input.lhe                                    # Convert to stdout
   lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
-  lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Gzip-compressed XML output
-  lhe2lhe -i input.lhe -o output.h5 --file-format hdf5  # HDF5/LHEH5 output
-  lhe2lhe -i input.lhe -o output.h5 --file-format hdf5 --compress # HDF5 with gzip-compressed datasets
-  lhe2lhe -i input.lhe -o output.lhe --weight-format weights # Use weights format
-  lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
-  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # XML with gzip compression
+  lhe2lhe -i input.lhe -o output.lhe.gz --output-format gz      # Gzip-compressed XML output
+  lhe2lhe -i input.lhe -o output.lhe --output-format weights    # XML output with <weights> blocks
+  lhe2lhe -i input.lhe -o output.lhe --output-format no-weights # XML output without alternate weights
+  lhe2lhe -i input.lhe -o output.h5 --output-format hdf5        # HDF5/LHEH5 output
+  lhe2lhe -i input.lhe -o output.h5 --output-format hdf5-gz     # HDF5 with gzip-compressed datasets
   lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
   cat input.lhe | lhe2lhe                                 # Convert from stdin to stdout
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
-File formats:
-  xml   - XML/LHE output (default)
-  hdf5  - HDF5-based LHEH5 output
-
-Weight formats:
-  rwgt    - Include weights in an <rwgt> block (default)
-  weights - Include weights in a <weights> block
-  none    - Exclude all alternate event weights
+Output formats:
+  default     - pylhe.DEFAULT_FORMAT (default XML/RWGT output)
+  gz          - pylhe.GZ_FORMAT
+  rwgt        - pylhe.RWGT_FORMAT
+  weights     - pylhe.WEIGHTS_FORMAT
+  rwgt-gz     - pylhe.RWGT_GZ_FORMAT
+  weights-gz  - pylhe.WEIGHTS_GZ_FORMAT
+  no-weights  - pylhe.NO_WEIGHTS_FORMAT
+  hdf5        - pylhe.HDF5_FORMAT
+  hdf5-gz     - pylhe.HDF5_GZ_FORMAT
         """,
     )
 
@@ -267,21 +257,10 @@ Weight formats:
     )
     parser.add_argument("--output", "-o", help="Output LHE file (default: stdout)")
 
-    add_file_format_argument(parser)
-
-    parser.add_argument(
-        "--compress",
-        "-c",
-        action="store_true",
-        help="Compress the selected output format (gzip for XML, gzip-compressed datasets for HDF5)",
-        default=False,
-    )
-
-    add_weight_format_argument(
+    add_output_format_argument(
         parser,
-        "--weight-format",
-        "-w",
-        help_text="Weight format to use in output (default: rwgt)",
+        "--output-format",
+        help_text="Output format preset to use (default: default)",
     )
 
     parser.add_argument(
@@ -307,7 +286,7 @@ Weight formats:
 
     args = parser.parse_args()
 
-    file_format = parse_file_format(args.file_format)
+    output_format = parse_output_format(args.output_format)
 
     # Validate input file exists (skip validation for stdin)
     if args.input != "-":
@@ -325,9 +304,7 @@ Weight formats:
     retcode, message = convert_lhe_file(
         input_file=args.input,
         output_file=args.output,
-        file_format=file_format,
-        compress=args.compress,
-        weight_format=parse_weight_format(args.weight_format),
+        output_format=output_format,
         append_lhe_weight=args.append_lhe_weight,
         only_weight_id=args.only_weight_id,
         add_initrwgt=args.add_initrwgt,

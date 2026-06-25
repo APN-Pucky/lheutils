@@ -28,7 +28,7 @@ def test_convert_lhe_file_add_initrwgt_adds_init_weight(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
+        output_format=pylhe.WEIGHTS_FORMAT,
         add_initrwgt=[("newgroup", "9001", "new weight")],
     )
 
@@ -57,7 +57,7 @@ def test_convert_lhe_file_append_lhe_weight_copies_central_weight(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
+        output_format=pylhe.WEIGHTS_FORMAT,
         append_lhe_weight=("newgroup", "9002", "copied central weight"),
     )
 
@@ -93,7 +93,7 @@ def test_convert_lhe_file_rejects_duplicate_weight_ids(tmp_path, kwargs):
     retcode, message = convert_lhe_file(
         skhep_testdata.data_path("pylhe-testlhef3.lhe"),
         str(output_file),
-        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
+        output_format=pylhe.WEIGHTS_FORMAT,
         **kwargs,
     )
 
@@ -112,7 +112,7 @@ def test_convert_lhe_file_only_weight_id_filters_initrwgt_and_events(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        weight_format=pylhe.LHEWeightFormat.WEIGHTS,
+        output_format=pylhe.WEIGHTS_FORMAT,
         only_weight_id="1002",
     )
 
@@ -141,7 +141,7 @@ def test_convert_lhe_file_supports_hdf5_output(tmp_path):
     retcode, message = convert_lhe_file(
         input_file,
         str(output_file),
-        file_format="hdf5",
+        output_format=pylhe.HDF5_FORMAT,
     )
 
     assert retcode == 0
@@ -156,24 +156,14 @@ def test_convert_lhe_file_supports_hdf5_output(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "file_format",
-    ["gzip", "hdf5"],
+    "output_format",
+    [pylhe.GZ_FORMAT, pylhe.HDF5_FORMAT],
 )
-def test_convert_lhe_file_rejects_non_plain_stdout(file_format):
+def test_convert_lhe_file_rejects_non_plain_stdout(output_format):
     retcode, message = convert_lhe_file(
         skhep_testdata.data_path("pylhe-testlhef3.lhe"),
-        file_format=file_format,
+        output_format=output_format,
     )
 
     assert retcode == 1
-    assert message == "Error: Stdout only supports uncompressed XML output"
-
-
-def test_convert_lhe_file_rejects_compressed_stdout():
-    retcode, message = convert_lhe_file(
-        skhep_testdata.data_path("pylhe-testlhef3.lhe"),
-        compress=True,
-    )
-
-    assert retcode == 1
-    assert message == "Error: Stdout only supports uncompressed XML output"
+    assert message == "Error: Stdout only supports uncompressed XML output formats"

@@ -8,8 +8,39 @@ import lheutils
 WEIGHT_FORMAT_CHOICES = tuple(
     weight_format.value for weight_format in pylhe.LHEWeightFormat
 )
-FILE_FORMAT_CHOICES = ("none", "xml", "hdf5")
-LHEFileFormatName = Literal["none", "xml", "hdf5"]
+OUTPUT_FORMAT_CHOICES = (
+    "default",
+    "gz",
+    "rwgt",
+    "weights",
+    "rwgt-gz",
+    "weights-gz",
+    "no-weights",
+    "hdf5",
+    "hdf5-gz",
+)
+LHEOutputFormatName = Literal[
+    "default",
+    "gz",
+    "rwgt",
+    "weights",
+    "rwgt-gz",
+    "weights-gz",
+    "no-weights",
+    "hdf5",
+    "hdf5-gz",
+]
+OUTPUT_FORMAT_PRESETS: dict[LHEOutputFormatName, pylhe.LHEOutputFormat] = {
+    "default": pylhe.DEFAULT_FORMAT,
+    "gz": pylhe.GZ_FORMAT,
+    "rwgt": pylhe.RWGT_FORMAT,
+    "weights": pylhe.WEIGHTS_FORMAT,
+    "rwgt-gz": pylhe.RWGT_GZ_FORMAT,
+    "weights-gz": pylhe.WEIGHTS_GZ_FORMAT,
+    "no-weights": pylhe.NO_WEIGHTS_FORMAT,
+    "hdf5": pylhe.HDF5_FORMAT,
+    "hdf5-gz": pylhe.HDF5_GZ_FORMAT,
+}
 
 
 def create_base_parser(**kwargs: Any) -> argparse.ArgumentParser:
@@ -49,40 +80,37 @@ def parse_weight_format(
     return pylhe.LHEWeightFormat(weight_format)
 
 
-def add_file_format_argument(
+def add_output_format_argument(
     parser: argparse.ArgumentParser,
     *flags: str,
-    help_text: str = "File format to use in output (default: none)",
+    help_text: str = "Output format preset to use (default: default)",
 ) -> None:
-    """Add the shared file-format CLI argument."""
+    """Add the shared output-format CLI argument."""
     parser.add_argument(
-        *(flags or ("--file-format",)),
-        choices=FILE_FORMAT_CHOICES,
-        default="none",
+        *(flags or ("--output-format",)),
+        choices=OUTPUT_FORMAT_CHOICES,
+        default="default",
         help=help_text,
     )
 
 
-def parse_file_format(
-    file_format: str,
-) -> LHEFileFormatName:
-    """Normalize a CLI file-format value to the supported names."""
-    if file_format not in FILE_FORMAT_CHOICES:
-        err = f"Unsupported file format: {file_format}"
+def parse_output_format(
+    output_format: str | pylhe.LHEOutputFormat,
+) -> pylhe.LHEOutputFormat:
+    """Normalize a CLI output-format value to the corresponding pylhe preset."""
+    if isinstance(output_format, (pylhe.LHEXMLFormat, pylhe.LHEHDF5Format)):
+        return output_format
+    if output_format not in OUTPUT_FORMAT_PRESETS:
+        err = f"Unsupported output format: {output_format}"
         raise ValueError(err)
-    return file_format
+    return OUTPUT_FORMAT_PRESETS[output_format]
 
 
 def create_output_format(
     weight_format: pylhe.LHEWeightFormat,
-    file_format: LHEFileFormatName = "none",
-    compress: bool | None = None,
-) -> pylhe.LHEOutputFormat | None:
-    """Build a pylhe output-format object for writers."""
-    if file_format == "none":
-        return None
-    if file_format == "hdf5":
-        return pylhe.LHEHDF5Format(compress=compress)
+    compress: bool = False,
+) -> pylhe.LHEXMLFormat:
+    """Build an XML pylhe output-format object for writers."""
     return pylhe.LHEXMLFormat(
         weights=weight_format,
         compress=compress,
