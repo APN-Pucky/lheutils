@@ -8,8 +8,8 @@ import lheutils
 WEIGHT_FORMAT_CHOICES = tuple(
     weight_format.value for weight_format in pylhe.LHEWeightFormat
 )
-FILE_FORMAT_CHOICES = ("xml", "hdf5")
-LHEFileFormatName = Literal["xml", "hdf5"]
+FILE_FORMAT_CHOICES = ("none", "xml", "hdf5")
+LHEFileFormatName = Literal["none", "xml", "hdf5"]
 
 
 def create_base_parser(**kwargs: Any) -> argparse.ArgumentParser:
@@ -52,13 +52,13 @@ def parse_weight_format(
 def add_file_format_argument(
     parser: argparse.ArgumentParser,
     *flags: str,
-    help_text: str = "File format to use in output (default: xml)",
+    help_text: str = "File format to use in output (default: none)",
 ) -> None:
     """Add the shared file-format CLI argument."""
     parser.add_argument(
         *(flags or ("--file-format",)),
         choices=FILE_FORMAT_CHOICES,
-        default="xml",
+        default="none",
         help=help_text,
     )
 
@@ -75,13 +75,15 @@ def parse_file_format(
 
 def create_output_format(
     weight_format: pylhe.LHEWeightFormat,
-    file_format: LHEFileFormatName = "xml",
+    file_format: LHEFileFormatName = "none",
     compress: bool | None = None,
-) -> pylhe.LHEOutputFormat:
+) -> pylhe.LHEOutputFormat | None:
     """Build a pylhe output-format object for writers."""
+    if file_format == "none":
+        return None
     if file_format == "hdf5":
-        return pylhe.LHEHDF5Format(compress=compress is True)
+        return pylhe.LHEHDF5Format(compress=compress)
     return pylhe.LHEXMLFormat(
         weights=weight_format,
-        compress=compress is True,
+        compress=compress,
     )
