@@ -123,8 +123,8 @@ def diff_lhe_init(
     lhei2: pylhe.LHEInit,
     lheh1: pylhe.LHEHeader | None,
     lheh2: pylhe.LHEHeader | None,
-    version1: str,
-    version2: str,
+    version1: str | None,
+    version2: str | None,
     check_init: bool,
     check_weights: bool,
     absolute_tolerance: float,
@@ -153,7 +153,7 @@ def diff_lhe_init(
                 old=len(attributes1), new=len(attributes2)
             )
         for (k1, v1), (k2, v2) in zip(
-            attributes1.items(), attributes2.items(), strict=True
+            attributes1.items(), attributes2.items(), strict=False
         ):
             if k1 != k2:
                 diffs[f"{prefix}_attrib_key_{k1}"] = LHEDiff(old=k1, new=k2)
@@ -178,7 +178,7 @@ def diff_lhe_init(
                 old=len(weights1), new=len(weights2)
             )
         for index, (weight1, weight2) in enumerate(
-            zip(weights1, weights2, strict=True), start=1
+            zip(weights1, weights2, strict=False), start=1
         ):
             weight_key = weight1.id or f"weight_{index}"
             if weight1.id != weight2.id:
@@ -215,7 +215,7 @@ def diff_lhe_init(
             )
 
         for index, (wg1, wg2) in enumerate(
-            zip(weight_groups1, weight_groups2, strict=True), start=1
+            zip(weight_groups1, weight_groups2, strict=False), start=1
         ):
             group_name = _weight_group_name(wg1, index)
             group_name2 = _weight_group_name(wg2, index)
@@ -289,7 +289,12 @@ def diff_lhe_init(
                 old=lhei1.initInfo.numProcesses, new=lhei2.initInfo.numProcesses
             )
 
-        for proc1, proc2 in zip(lhei1.procInfo, lhei2.procInfo, strict=True):
+        if len(lhei1.procInfo) != len(lhei2.procInfo):
+            diffs["num_procInfo"] = LHEDiff(
+                old=len(lhei1.procInfo), new=len(lhei2.procInfo)
+            )
+
+        for proc1, proc2 in zip(lhei1.procInfo, lhei2.procInfo, strict=False):
             if not math.isclose(
                 proc1.xSection,
                 proc2.xSection,
