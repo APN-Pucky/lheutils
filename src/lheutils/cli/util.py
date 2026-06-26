@@ -1,9 +1,25 @@
 import argparse
+from pathlib import Path
 from typing import Any, Literal
 
 import pylhe
+from particle import Particle
 
 import lheutils
+
+try:
+    import lhapdf  # type: ignore[import-not-found]
+
+    LHAPDF_BASE_PATHS = lhapdf.getPDFPath()
+except ImportError:
+    LHAPDF_BASE_PATHS = [
+        "/usr/share/lhapdf",
+        "/usr/local/share/lhapdf",
+        "/opt/local/share/lhapdf",
+        "/opt/share/lhapdf",
+        str(Path.home() / ".local/share/lhapdf"),
+        str(Path.home() / ".lhapdf"),
+    ]
 
 WEIGHT_FORMAT_CHOICES = tuple(
     weight_format.value for weight_format in pylhe.LHEWeightFormat
@@ -41,6 +57,46 @@ OUTPUT_FORMAT_PRESETS: dict[LHEOutputFormatName, pylhe.LHEOutputFormat] = {
     "hdf5": pylhe.HDF5_FORMAT,
     "hdf5-gz": pylhe.HDF5_GZ_FORMAT,
 }
+
+
+def lhapdf_name(pdf_id: int) -> str:
+
+    for base in LHAPDF_BASE_PATHS:
+        index = Path(base) / "pdfsets.index"
+        if not index.exists():
+            continue
+
+        with index.open() as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+
+                first_id_str, set_name, nmem_str = line.split()[:3]
+                first_id = int(first_id_str)
+                nmem = int(nmem_str)
+
+                if first_id <= pdf_id < first_id + nmem:
+                    return set_name
+
+    return str(pdf_id)
+
+
+def lhapdf_name_and_id(pdf_id: int) -> str:
+    name = lhapdf_name(pdf_id)
+    return f"{name} ({pdf_id})" if name != str(pdf_id) else f"({pdf_id})"
+
+
+def pdg_name(pdgid: int) -> str:
+    try:
+        return str(Particle.from_pdgid(pdgid).name)
+    except LookupError:
+        return str(pdgid)
+
+
+def pdg_name_and_id(pdgid: int) -> str:
+    name = pdg_name(pdgid)
+    return f"{name} ({pdgid})" if name != str(pdgid) else f"({pdgid})"
 
 
 def create_base_parser(**kwargs: Any) -> argparse.ArgumentParser:

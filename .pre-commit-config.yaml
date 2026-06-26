@@ -47,6 +47,7 @@ repos:
       additional_dependencies:
         - "pylhe @ git+https://github.com/scikit-hep/pylhe.git@lheh5_support"
         - xmlschema
+        - particle
 
 - repo: https://github.com/pre-commit/pygrep-hooks
   rev: v1.10.0
