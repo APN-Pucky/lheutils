@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pylhe
-from particle import Particle
+from particle import InvalidParticle, Particle, ParticleNotFound
 
 import lheutils
 
@@ -90,7 +90,7 @@ def lhapdf_name_and_id(pdf_id: int) -> str:
 def pdg_name(pdgid: int) -> str:
     try:
         return str(Particle.from_pdgid(pdgid).name)
-    except LookupError:
+    except (LookupError, InvalidParticle, ParticleNotFound):
         return str(pdgid)
 
 
