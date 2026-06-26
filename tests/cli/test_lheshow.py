@@ -1,7 +1,14 @@
+import doctest
+
 import pylhe
 import skhep_testdata
 
 from lheutils.cli.lheshow import _format_event_pretty, show_event, show_init
+
+
+def _assert_matches_with_ellipsis(actual: str, expected: str) -> None:
+    checker = doctest.OutputChecker()
+    assert checker.check_output(expected, actual, doctest.ELLIPSIS), actual
 
 
 def test_show_event_pretty_prints_human_readable_summary(capsys):
@@ -52,10 +59,22 @@ def test_show_init_pretty_prints_human_readable_summary(capsys):
     )
 
     output = capsys.readouterr().out
+    beam_lines = "\n".join(
+        line for line in output.splitlines() if line.startswith("  Beam ")
+    )
+
     assert "Init Summary" in output
-    assert "Beam A:" in output
     assert "Number of Generators:" in output
     assert "Processes:" in output
+    _assert_matches_with_ellipsis(
+        beam_lines,
+        "\n".join(
+            [
+                "  Beam A: p (2212) @ 4000 GeV (PDF group -1, set ...21100))",
+                "  Beam B: p (2212) @ 4000 GeV (PDF group -1, set ...21100))",
+            ]
+        ),
+    )
 
 
 def test_show_init_repr_prints_python_repr(capsys):

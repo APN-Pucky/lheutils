@@ -79,6 +79,8 @@ def _format_event_pretty(event: pylhe.LHEEvent) -> str:
         f"  Scale: {_format_number(event.eventinfo.scale)}",
         f"  alpha_QED: {_format_number(event.eventinfo.aqed)}",
         f"  alpha_QCD: {_format_number(event.eventinfo.aqcd)}",
+        f"  npLO: {_format_optional_attribute(event.attributes, 'npLO')}",
+        f"  npNLO: {_format_optional_attribute(event.attributes, 'npNLO')}",
         f"  XML attributes: {_format_extra_event_attributes(event.attributes)}",
         f"  Incoming PDG IDs: {incoming}",
         f"  Outgoing PDG IDs: {outgoing}",
