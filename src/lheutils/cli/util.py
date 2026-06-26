@@ -10,7 +10,7 @@ import lheutils
 try:
     import lhapdf  # type: ignore[import-not-found]
 
-    LHAPDF_BASE_PATHS = lhapdf.getPDFPath()
+    LHAPDF_BASE_PATHS = lhapdf.paths()
 except ImportError:
     LHAPDF_BASE_PATHS = [
         "/usr/share/lhapdf",
