@@ -462,6 +462,7 @@ Note: Multiple filters are combined with AND logic.
         max_events=args.max_events,
         negative_weights=args.negative_weights,
         zero_weights=args.zero_weights,
+        zero_weights_eps=args.zero_weights_eps,
     )
 
 
