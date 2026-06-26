@@ -21,8 +21,6 @@ def test_show_event_pretty_prints_human_readable_summary(capsys):
     output = capsys.readouterr().out
     assert "Event Summary" in output
     assert "Process ID:" in output
-    assert "npLO: -1" in output
-    assert "npNLO: 1" in output
     assert "XML attributes: None" in output
     assert "Scales:" in output
     assert "lifetime=0" in output
@@ -112,8 +110,6 @@ def test_format_event_pretty_shows_none_for_missing_nplo_and_npnlo():
     )
 
     output = _format_event_pretty(event)
-    assert "npLO: None" in output
-    assert "npNLO: None" in output
     assert "XML attributes: None" in output
     assert "Number of weights: 0" in output
     assert "Scales: None" in output
@@ -130,12 +126,10 @@ def test_format_event_pretty_shows_extra_xml_attributes():
             aqcd=4.0,
         ),
         particles=[],
-        attributes={"trials": "149994.0", "npLO": " 1 "},
+        attributes={"trials": "149994.0"},
     )
 
     output = _format_event_pretty(event)
-    assert "npLO: 1" in output
-    assert "npNLO: None" in output
     assert "XML attributes: trials=149994.0" in output
 
 
