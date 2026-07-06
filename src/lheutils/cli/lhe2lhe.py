@@ -119,7 +119,7 @@ def _keep_only_weight_definition(
 def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
-    output_format: pylhe.LHEOutputFormat = pylhe.DEFAULT_FORMAT,
+    output_format: pylhe.LHEOutputFormat | None = None,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
     add_initrwgt: list[tuple[str, str, str]] | None = None,
@@ -240,6 +240,7 @@ Examples:
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
 Output formats:
+  none        - None (Detect by suffix)
   default     - pylhe.DEFAULT_FORMAT (default XML/RWGT output)
   gz          - pylhe.GZ_FORMAT
   rwgt        - pylhe.RWGT_FORMAT
@@ -260,7 +261,7 @@ Output formats:
     add_output_format_argument(
         parser,
         "--output-format",
-        help_text="Output format preset to use (default: default)",
+        help_text="Output format preset to use (default: none)",
     )
 
     parser.add_argument(

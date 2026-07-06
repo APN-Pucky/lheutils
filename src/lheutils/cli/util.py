@@ -25,6 +25,7 @@ WEIGHT_FORMAT_CHOICES = tuple(
     weight_format.value for weight_format in pylhe.LHEWeightFormat
 )
 OUTPUT_FORMAT_CHOICES = (
+    "none",
     "default",
     "gz",
     "rwgt",
@@ -36,6 +37,7 @@ OUTPUT_FORMAT_CHOICES = (
     "hdf5-gz",
 )
 LHEOutputFormatName = Literal[
+    "none",
     "default",
     "gz",
     "rwgt",
@@ -46,7 +48,8 @@ LHEOutputFormatName = Literal[
     "hdf5",
     "hdf5-gz",
 ]
-OUTPUT_FORMAT_PRESETS: dict[LHEOutputFormatName, pylhe.LHEOutputFormat] = {
+OUTPUT_FORMAT_PRESETS: dict[LHEOutputFormatName, None | pylhe.LHEOutputFormat] = {
+    "none": None,
     "default": pylhe.DEFAULT_FORMAT,
     "gz": pylhe.GZ_FORMAT,
     "rwgt": pylhe.RWGT_FORMAT,
