@@ -148,7 +148,7 @@ def add_output_format_argument(
     parser.add_argument(
         *(flags or ("--output-format",)),
         choices=OUTPUT_FORMAT_CHOICES,
-        default="default",
+        default="none",
         help=help_text,
     )
 

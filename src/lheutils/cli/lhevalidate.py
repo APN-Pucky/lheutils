@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI tool to validate LHE files against XSD schema.
+CLI tool to validate LHE and LHEH5 files.
 """
 
 import argparse
@@ -14,6 +14,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TextIO
 
+import h5py
 import pylhe
 import xmlschema
 
@@ -26,6 +27,28 @@ SCHEMA_VERSIONS = {
     "lhe-v3.xsd": "3.0",
 }
 LHE_VERSION_RE = re.compile(r"<LesHouchesEvents\b[^>]*\bversion=['\"]([^'\"]+)['\"]")
+HDF5_SIGNATURE = b"\x89HDF\r\n\x1a\n"
+LHEH5_REQUIRED_DATASETS: dict[str, tuple[int | None, ...]] = {
+    "version": (3,),
+    "init": (10,),
+    "procInfo": (None, 6),
+    "events": (None, 10),
+    "particles": (None, 13),
+}
+LHEH5_OPTIONAL_DATASETS: dict[str, tuple[int | None, ...]] = {
+    "ctevents": (None, 9),
+    "ctparticles": (None, 4),
+}
+
+
+def _is_hdf5(filepath: str | Path) -> bool:
+    """Check if a file is HDF5 by reading its magic number."""
+    try:
+        with open(filepath, "rb") as f:
+            header = f.read(len(HDF5_SIGNATURE))
+        return header == HDF5_SIGNATURE
+    except OSError:
+        return False
 
 
 def _is_gzipped(filepath: str | Path) -> bool:
@@ -60,17 +83,17 @@ def _open_file(filepath: str | Path) -> io.TextIOWrapper:
 
 
 def validate_lhe_file(
-    file_input: str | TextIO,
+    file_input: str | Path | TextIO,
     schema_path: str,
     enable_xsd: bool = True,
     enable_pylhe: bool = True,
 ) -> bool:
-    """Validate an LHE file against the XSD schema and/or pylhe parsing.
+    """Validate an LHE/LHEH5 file against schema/layout checks and pylhe parsing.
 
     Args:
         file_input: File path or file object to validate
         schema_path: Path to an XSD schema file or schema directory
-        enable_xsd: Whether to perform XSD validation
+        enable_xsd: Whether to perform XSD or LHEH5 layout validation
         enable_pylhe: Whether to perform pylhe parsing validation
 
     Returns:
@@ -78,10 +101,10 @@ def validate_lhe_file(
     """
     try:
         # Handle different input types
-        if isinstance(file_input, str):
+        if isinstance(file_input, (str, Path)):
             # File path - we can read multiple times
             return _validate_file_path(
-                file_input, schema_path, enable_xsd, enable_pylhe
+                str(file_input), schema_path, enable_xsd, enable_pylhe
             )
         # stdin/file object - read once and validate buffer
         content = file_input.read()
@@ -96,6 +119,9 @@ def _validate_file_path(
     file_path: str, schema_path: str, enable_xsd: bool, enable_pylhe: bool
 ) -> bool:
     """Validate a file by path."""
+    if _is_hdf5(file_path):
+        return _validate_hdf5_file_path(file_path, enable_xsd, enable_pylhe)
+
     if enable_xsd:
         print("  Checking XSD schema compliance...")
         # Handle both compressed and uncompressed files by magic number
@@ -125,6 +151,25 @@ def _validate_buffer(
     if enable_pylhe:
         print("  Checking LHE format and structure...")
         lhefile = pylhe.LHEFile.frombuffer(StringIO(content))
+        return _validate_lhe_structure(lhefile)
+
+    return True
+
+
+def _validate_hdf5_file_path(
+    file_path: str,
+    enable_xsd: bool,
+    enable_pylhe: bool,
+) -> bool:
+    """Validate an LHEH5 file by path."""
+    if enable_xsd:
+        print("  Checking LHEH5 dataset compatibility...")
+        if not _validate_lheh5_dataset_compatibility(file_path):
+            return False
+
+    if enable_pylhe:
+        print("  Checking LHE format and structure...")
+        lhefile = pylhe.LHEFile.fromfile(file_path)
         return _validate_lhe_structure(lhefile)
 
     return True
@@ -233,6 +278,179 @@ def _validate_xsd_payload(
     return False
 
 
+def _format_expected_shape(expected_shape: tuple[int | None, ...]) -> str:
+    """Render an expected dataset shape for user-facing messages."""
+    return (
+        "("
+        + ", ".join("*" if dim is None else str(dim) for dim in expected_shape)
+        + ")"
+    )
+
+
+def _validate_lheh5_dataset_shape(
+    dataset_name: str,
+    actual_shape: tuple[int, ...],
+    expected_shape: tuple[int | None, ...],
+) -> bool:
+    """Validate a single LHEH5 dataset shape."""
+    if len(actual_shape) != len(expected_shape):
+        print(
+            "  ❌ "
+            f"Dataset '{dataset_name}' has shape {actual_shape}, "
+            f"expected {_format_expected_shape(expected_shape)}"
+        )
+        return False
+
+    if any(
+        expected is not None and actual != expected
+        for actual, expected in zip(actual_shape, expected_shape, strict=True)
+    ):
+        print(
+            "  ❌ "
+            f"Dataset '{dataset_name}' has shape {actual_shape}, "
+            f"expected {_format_expected_shape(expected_shape)}"
+        )
+        return False
+
+    return True
+
+
+def _validate_lheh5_row_multiple(
+    dataset_name: str,
+    row_count: int,
+    reference_name: str,
+    reference_count: int,
+) -> bool:
+    """Validate that one row count is a clean multiple of another."""
+    if reference_count == 0:
+        if row_count == 0:
+            return True
+        print(
+            "  ❌ "
+            f"Dataset '{dataset_name}' has {row_count} rows, "
+            f"but '{reference_name}' has 0 rows"
+        )
+        return False
+
+    if row_count % reference_count != 0:
+        print(
+            "  ❌ "
+            f"Dataset '{dataset_name}' has {row_count} rows, "
+            f"which is not a multiple of '{reference_name}' row count {reference_count}"
+        )
+        return False
+
+    return True
+
+
+def _validate_lheh5_dataset_compatibility(file_path: str) -> bool:
+    """Validate the dataset layout of an LHEH5 file."""
+    with h5py.File(file_path, "r") as h5file:
+        missing_datasets = [
+            dataset_name
+            for dataset_name in LHEH5_REQUIRED_DATASETS
+            if dataset_name not in h5file
+        ]
+        if missing_datasets:
+            print(
+                "  ❌ Missing required dataset(s): "
+                + ", ".join(sorted(missing_datasets))
+            )
+            return False
+
+        for dataset_name, expected_shape in LHEH5_REQUIRED_DATASETS.items():
+            actual_shape = tuple(int(dim) for dim in h5file[dataset_name].shape)
+            if not _validate_lheh5_dataset_shape(
+                dataset_name,
+                actual_shape,
+                expected_shape,
+            ):
+                return False
+
+        has_ctevents = "ctevents" in h5file
+        has_ctparticles = "ctparticles" in h5file
+        if has_ctevents != has_ctparticles:
+            print(
+                "  ❌ Counterterm datasets must appear together: "
+                "expected both 'ctevents' and 'ctparticles'"
+            )
+            return False
+
+        for dataset_name, expected_shape in LHEH5_OPTIONAL_DATASETS.items():
+            if dataset_name not in h5file:
+                continue
+            actual_shape = tuple(int(dim) for dim in h5file[dataset_name].shape)
+            if not _validate_lheh5_dataset_shape(
+                dataset_name,
+                actual_shape,
+                expected_shape,
+            ):
+                return False
+
+        event_count = int(h5file["events"].shape[0])
+        particle_count = int(h5file["particles"].shape[0])
+        if not _validate_lheh5_row_multiple(
+            "particles",
+            particle_count,
+            "events",
+            event_count,
+        ):
+            return False
+
+        expected_process_count = float(h5file["init"][9])
+        if not expected_process_count.is_integer():
+            print(
+                "  ❌ "
+                "Dataset 'init' stores a non-integer numProcesses value "
+                f"({expected_process_count})"
+            )
+            return False
+
+        procinfo_count = int(h5file["procInfo"].shape[0])
+        if int(expected_process_count) != procinfo_count:
+            print(
+                "  ❌ "
+                f"Dataset 'procInfo' has {procinfo_count} rows, "
+                f"but init numProcesses is {int(expected_process_count)}"
+            )
+            return False
+
+        if has_ctevents and has_ctparticles:
+            ctevent_count = int(h5file["ctevents"].shape[0])
+            ctparticle_count = int(h5file["ctparticles"].shape[0])
+
+            if ctevent_count != event_count:
+                print(
+                    "  ❌ "
+                    f"Dataset 'ctevents' has {ctevent_count} rows, "
+                    f"but 'events' has {event_count} rows"
+                )
+                return False
+
+            if not _validate_lheh5_row_multiple(
+                "ctparticles",
+                ctparticle_count,
+                "ctevents",
+                ctevent_count,
+            ):
+                return False
+
+            event_stride = 0 if event_count == 0 else particle_count // event_count
+            ctevent_stride = (
+                0 if ctevent_count == 0 else ctparticle_count // ctevent_count
+            )
+            if event_stride != ctevent_stride:
+                print(
+                    "  ❌ "
+                    "Datasets 'particles' and 'ctparticles' do not use the same "
+                    f"per-event row count ({event_stride} vs {ctevent_stride})"
+                )
+                return False
+
+    print("  ✓ LHEH5 dataset validation passed")
+    return True
+
+
 def _validate_lhe_structure(lhefile: pylhe.LHEFile) -> bool:
     """Validate LHE file structure using pylhe."""
     # Iterate through events to validate structure
@@ -272,18 +490,19 @@ def _get_default_schema_dir() -> Path:
 def main() -> None:
     """Main CLI function."""
     parser = create_base_parser(
-        description="Validate LHE files against XSD schema and/or LHE format",
+        description="Validate LHE/LHEH5 files against schema and/or format rules",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   lhevalidate file.lhe                     # Validate with both XSD and pylhe (default)
   lhevalidate --no-pylhe file.lhe          # XSD validation only (faster)
   lhevalidate --no-xsd file.lhe            # pylhe parsing validation only
+  lhevalidate file.hdf5                    # Validate LHEH5 dataset layout and pylhe parsing
   lhevalidate file1.lhe file2.lhe          # Validate multiple files
   cat file.lhe | lhevalidate               # Read from stdin
 
 Validation levels:
-  1. XSD schema validation - checks XML structure and format compliance
+  1. Schema/layout validation - XSD for XML LHE, dataset compatibility for LHEH5
   2. LHE format validation - uses pylhe to parse init/event blocks
         """,
     )
