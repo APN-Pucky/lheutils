@@ -186,3 +186,11 @@ To pick a specific weight ID
 ```console
 $ parallel 'lhe2lhe --only-weight-id aMiNLO -i {} -o {}.aminlo.lhe.gz' ::: fixed_*-rwgt.lhe
 ```
+
+### Rivet
+
+Rivet can read LHE files via HepMC3 to pipe a subset of a LHEFile to Rivet we can use /dev/stdin as source of a piped stream:
+
+```console
+lhefilter --events 1,100 filtered2.lhe |  /usr/bin/rivet -a MC_FSPARTICLES /dev/stdin  --verbose
+```
