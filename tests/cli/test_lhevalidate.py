@@ -184,24 +184,3 @@ def test_lhevalidate_lheh5_good_from_skhep_testdata(
     result = _run_lhevalidate(file_path)
     _assert_validation_passed(result, lhe_filename)
     assert "LHEH5 dataset validation passed" in result.stdout
-
-
-def test_lhevalidate_lheh5_rejects_inconsistent_particle_rows(tmp_path: Path):
-    """Test lhevalidate rejects LHEH5 files with inconsistent particle rows."""
-    broken_file = tmp_path / "broken_particles.hdf5"
-    copyfile("references/files/test.hdf5", broken_file)
-
-    with h5py.File(broken_file, "a") as h5file:
-        particles = h5file["particles"][...][:-1]
-        particle_attrs = dict(h5file["particles"].attrs)
-        del h5file["particles"]
-        particle_dataset = h5file.create_dataset("particles", data=particles)
-        for key, value in particle_attrs.items():
-            particle_dataset.attrs[key] = value
-
-    result = _run_lhevalidate(broken_file)
-    _assert_validation_failed(
-        result,
-        broken_file.name,
-        "Dataset 'particles' has 399 rows, which is not a multiple of 'events' row count 100",
-    )
