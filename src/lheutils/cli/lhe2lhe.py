@@ -191,6 +191,8 @@ def convert_lhe_file(
 
         # Write the output file
         if output_file is None:
+            if output_format is None:
+                output_format = pylhe.DEFAULT_FORMAT
             if (
                 not isinstance(output_format, pylhe.LHEXMLFormat)
                 or output_format.compress
