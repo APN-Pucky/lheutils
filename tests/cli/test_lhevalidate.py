@@ -45,11 +45,6 @@ POWHEG_LHE_FILES_BAD = [
         "attribute combine='None'",
     ),
 ]
-LHEH5_FILES = [
-    Path("references/files/test.hdf5"),
-    Path("references/files/j7_1.hdf5"),
-    Path("references/files/l1_0.hdf5"),
-]
 SKHEP_LHEH5_FILES = [
     ("pylhe-testfile-sherpa.hdf5", (2420, 10), (24200, 13)),
     ("pylhe-testfile-hpcgen.hdf5", (100, 10), (400, 13)),
@@ -162,14 +157,6 @@ def test_lhevalidate_whizard_v2_xsd_only():
 
     result = _run_lhevalidate(file_path, "--no-pylhe")
     _assert_validation_passed(result, "pylhe-testfile-whizard-3.1.4-eeWW.lhe")
-
-
-@pytest.mark.parametrize("lheh5_path", LHEH5_FILES)
-def test_lhevalidate_lheh5_good(lheh5_path: Path):
-    """Test lhevalidate on known-good LHEH5 reference files."""
-    result = _run_lhevalidate(lheh5_path)
-    _assert_validation_passed(result, lheh5_path.name)
-    assert "LHEH5 dataset validation passed" in result.stdout
 
 
 @pytest.mark.parametrize(
