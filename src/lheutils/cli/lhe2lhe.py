@@ -215,9 +215,6 @@ def convert_lhe_file(
         if input_file == "-":
             return 1, "Error: Unable to read from stdin"
         return 1, f"Error: Input file '{input_file}' not found"
-    except Exception as e:
-        source = "stdin" if input_file == "-" else f"input file '{input_file}'"
-        return 1, f"Error during conversion from {source}: {e}"
     return 0, "Conversion successful"
 
 
