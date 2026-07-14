@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
@@ -31,14 +32,18 @@ def lhe_unstack(lhefile_path: str) -> list[pylhe.LHEFile]:
                     yield event
 
         newinit = pylhe.LHEInit(
-            lhe_init.initInfo,
-            [proc_info],
-            lhe_init.weightgroup,
-            LHEVersion=lhe_init.LHEVersion,
+            initInfo=lhe_init.initInfo,
+            procInfo=[proc_info],
+            generators=lhe_init.generators,
         )
         # Create new LHE file with filtered events
         newlhef = pylhe.LHEFile(
-            init=newinit, events=_events_for_process(proc_info.procId)
+            init=newinit,
+            events=_events_for_process(proc_info.procId),
+            header=deepcopy(lhefile.header),
+            comment=lhefile.comment,
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
         )
         result_files.append(newlhef)
 

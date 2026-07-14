@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+import h5py
 import pytest
 import skhep_testdata
 
@@ -42,6 +43,10 @@ POWHEG_LHE_FILES_BAD = [
         "pylhe-testfile-powheg-box-v2-directphoton.lhe",
         "attribute combine='None'",
     ),
+]
+SKHEP_LHEH5_FILES = [
+    ("pylhe-testfile-sherpa.hdf5", (2420, 10), (24200, 13)),
+    ("pylhe-testfile-hpcgen.hdf5", (100, 10), (400, 13)),
 ]
 
 # Other POWHEG fixtures still have schema differences unrelated to the trailing
@@ -151,3 +156,30 @@ def test_lhevalidate_whizard_v2_xsd_only():
 
     result = _run_lhevalidate(file_path, "--no-pylhe")
     _assert_validation_passed(result, "pylhe-testfile-whizard-3.1.4-eeWW.lhe")
+
+
+@pytest.mark.parametrize(
+    ("lhe_filename", "expected_events_shape", "expected_particles_shape"),
+    SKHEP_LHEH5_FILES,
+)
+def test_lhevalidate_lheh5_good_from_skhep_testdata(
+    lhe_filename: str,
+    expected_events_shape: tuple[int, int],
+    expected_particles_shape: tuple[int, int],
+):
+    """Test lhevalidate on scikit-hep LHEH5 fixtures."""
+    try:
+        file_path = skhep_testdata.data_path(lhe_filename)
+    except Exception:
+        pytest.skip(f"File {lhe_filename} not available in skhep_testdata")
+
+    with h5py.File(file_path, "r") as h5file:
+        assert tuple(h5file["version"][...]) == (2, 0, 0)
+        assert h5file["events"].shape == expected_events_shape
+        assert h5file["particles"].shape == expected_particles_shape
+        assert h5file["init"].shape == (10,)
+        assert h5file["procInfo"].shape == (1, 6)
+
+    result = _run_lhevalidate(file_path)
+    _assert_validation_passed(result, lhe_filename)
+    assert "LHEH5 dataset validation passed" in result.stdout

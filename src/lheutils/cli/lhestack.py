@@ -10,32 +10,67 @@ with a merged initialization section containing all process information.
 import argparse
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
-def check_init_consistency(init_files: list[pylhe.LHEInit]) -> bool:
+def _initrwgt_tuples(
+    header: pylhe.LHEHeader | None,
+) -> list[
+    tuple[
+        str,
+        tuple[tuple[str, str], ...],
+        tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...],
+    ]
+]:
+    """Return a comparable representation of the initrwgt weight groups."""
+    if header is None:
+        return []
+
+    entries = []
+    for index, entry in enumerate(header.initrwgt.entries, start=1):
+        if not isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
+            continue
+        group_name = entry.name or entry.attributes.get("type", f"weight_group_{index}")
+        weights = tuple(
+            (weight.id, weight.name, tuple(weight.attributes.items()))
+            for weight in entry.weights
+        )
+        entries.append((group_name, tuple(entry.attributes.items()), weights))
+    return entries
+
+
+def check_init_consistency(lhefiles: list[pylhe.LHEFile]) -> bool:
     """
     Check if LHE initialization sections are consistent for stacking.
 
-    For stacking, we require the initInfo and weightgroup to be identical,
+    For stacking, we require the initInfo and initrwgt weight groups to be identical,
     but procInfo can differ (that's what we're combining).
 
     Args:
-        init_files: List of LHEInit objects to check
+        lhefiles: List of LHEFile objects to check
 
     Returns:
         True if init sections are consistent for stacking
     """
-    if len(init_files) < 2:
+    if len(lhefiles) < 2:
         return True
 
-    reference_init = init_files[0]
+    reference_file = lhefiles[0]
+    reference_init = reference_file.init
+    reference_initrwgt = _initrwgt_tuples(reference_file.header)
 
-    for i, init in enumerate(init_files[1:], 1):
+    for i, lhefile in enumerate(lhefiles[1:], 1):
+        init = lhefile.init
         # Check initInfo compatibility (beam info, etc.)
         if reference_init.initInfo != init.initInfo:
             print(
@@ -44,8 +79,8 @@ def check_init_consistency(init_files: list[pylhe.LHEInit]) -> bool:
             )
             return False
 
-        # Check weightgroup compatibility
-        if reference_init.weightgroup != init.weightgroup:
+        # Check initrwgt compatibility
+        if reference_initrwgt != _initrwgt_tuples(lhefile.header):
             print(
                 f"Error: File {i + 1} has different weight group configuration",
                 file=sys.stderr,
@@ -59,8 +94,7 @@ def stack_lhe_files(
     input_files: list[str],
     output_file: str,
     new_ids: bool = False,
-    rwgt: bool = True,
-    weights: bool = False,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
 ) -> None:
     """
     Stack multiple LHE files into a single output file.
@@ -72,12 +106,10 @@ def stack_lhe_files(
         input_files: List of paths to input LHE files
         output_file: Path to the output LHE file
         new_ids: Whether to remap process IDs to ensure uniqueness
-        rwgt: Whether to preserve rwgt weights in output
-        weights: Whether to preserve event weights in output
+        weight_format: How to serialize event weights in output
     """
     # Read all input files and their initialization sections
     lhefiles: list[pylhe.LHEFile] = []
-    init_sections = []
     all_proc_info = []
 
     print(f"Reading {len(input_files)} input files...")
@@ -91,7 +123,6 @@ def stack_lhe_files(
         lhefile = pylhe.LHEFile.fromfile(input_file)
 
         lhefiles.append(lhefile)
-        init_sections.append(lhefile.init)
 
         newprocs = []
         # map process IDs to ensure uniqueness
@@ -108,7 +139,7 @@ def stack_lhe_files(
 
     # Check initialization section consistency
     print("Checking initialization section consistency...")
-    if not check_init_consistency(init_sections):
+    if not check_init_consistency(lhefiles):
         print(
             "Error: Input files have incompatible initialization sections.",
             file=sys.stderr,
@@ -130,12 +161,12 @@ def stack_lhe_files(
         )
 
     # Create merged initialization section
-    reference_init = init_sections[0]
+    reference_file = lhefiles[0]
+    reference_init = reference_file.init
     merged_init = pylhe.LHEInit(
-        reference_init.initInfo,
-        all_proc_info,  # Combined process information
-        reference_init.weightgroup,
-        LHEVersion=reference_init.LHEVersion,
+        initInfo=reference_init.initInfo,
+        procInfo=all_proc_info,
+        generators=reference_init.generators,
     )
 
     # Create merged file with events from all input files
@@ -147,10 +178,20 @@ def stack_lhe_files(
                 yield e
 
     # Create output file
-    stacked_file = pylhe.LHEFile(init=merged_init, events=stacked_events())
+    stacked_file = pylhe.LHEFile(
+        init=merged_init,
+        events=stacked_events(),
+        header=deepcopy(reference_file.header),
+        comment=reference_file.comment,
+        version=reference_file.version,
+        extra_attributes=reference_file.extra_attributes.copy(),
+    )
 
     # Write the stacked file
-    stacked_file.tofile(output_file, rwgt=rwgt, weights=weights)
+    stacked_file.tofile(
+        output_file,
+        lheformat=create_output_format(weight_format),
+    )
     print(f"Successfully wrote stacked file: {output_file}")
 
 
@@ -183,12 +224,7 @@ Examples:
         "--new-ids", action="store_true", help="Remap process IDs to ensure uniqueness"
     )
 
-    parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
-    )
+    add_weight_format_argument(parser)
 
     args = parser.parse_args()
 
@@ -219,8 +255,7 @@ Examples:
         args.input_files,
         args.output_file,
         new_ids=args.new_ids,
-        rwgt=args.weight_format == "rwgt",
-        weights=args.weight_format == "weights",
+        weight_format=parse_weight_format(args.weight_format),
     )
 
 

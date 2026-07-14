@@ -15,7 +15,7 @@ import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TextIO, Union
+from typing import Any, TextIO
 
 import pylhe
 from typing_extensions import Self
@@ -309,8 +309,8 @@ class LHECheckPositiveMassViolation:
 class LHECheckParticleViolation:
     particle_index: int
     particle_pdgid: int
-    on_shell_violations: Optional[LHECheckOnShellViolation]
-    positive_mass_violation: Optional[LHECheckPositiveMassViolation]
+    on_shell_violations: LHECheckOnShellViolation | None
+    positive_mass_violation: LHECheckPositiveMassViolation | None
 
     @property
     def total_violations(self) -> int:
@@ -343,7 +343,7 @@ class LHECheckParticleViolation:
 class LHECheckEventViolation:
     event_index: int
     particle_violations: list[LHECheckParticleViolation]
-    total_momentum_violations: Optional[LHECheckTotalMomentaViolations]
+    total_momentum_violations: LHECheckTotalMomentaViolations | None
 
     @property
     def total_violations(self) -> int:
@@ -392,7 +392,7 @@ class LHECheck:
 
 
 def get_lhecheck(
-    filepath_or_fileobj: Union[str, TextIO],
+    filepath_or_fileobj: str | TextIO,
     lhecargs: LHECheckArgs,
 ) -> LHECheck:
     # Read LHE file
@@ -488,7 +488,7 @@ class LHECheckSummary:
 
 
 def get_lhechecksummary(
-    filepaths_or_fileobjs: list[Union[str, TextIO]],
+    filepaths_or_fileobjs: list[str | TextIO],
     lhecargs: LHECheckArgs,
 ) -> LHECheckSummary:
     lhechecks = []
@@ -576,7 +576,7 @@ Examples:
     # Check if reading from stdin
     use_stdin = not args.files and not sys.stdin.isatty()
 
-    file_inputs: list[Union[str, TextIO]] = []
+    file_inputs: list[str | TextIO] = []
     if use_stdin:
         # Read from stdin
         file_inputs += [sys.stdin]

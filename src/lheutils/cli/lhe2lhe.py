@@ -1,31 +1,125 @@
 #!/usr/bin/env python3
 """
-CLI tool to convert LHE files with different compression and weight format options.
+CLI tool to convert LHE files with different output format presets.
 
 This tool allows you to convert Les Houches Event (LHE) files from one format
-to another, with options to change compression and weight format.
+to another, with options to change the output format preset.
 """
 
 import argparse
 import signal
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser, get_max_weight_index
+from lheutils.cli.util import (
+    add_output_format_argument,
+    create_base_parser,
+    parse_output_format,
+)
 
 # We do not want a Python Exception on broken pipe, which happens when piping to 'head' or 'less'
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
+def _ensure_header(lhefile: pylhe.LHEFile) -> pylhe.LHEHeader:
+    """Ensure the LHE file has a header so initrwgt entries can be stored."""
+    if lhefile.header is None:
+        lhefile.header = pylhe.LHEHeader(initrwgt=pylhe.LHEInitRWGT())
+    return lhefile.header
+
+
+def _find_weight_group(
+    initrwgt: pylhe.LHEInitRWGT,
+    group_name: str,
+) -> pylhe.LHEInitRWGTWeightGroup | None:
+    """Find a matching weight group by name or legacy type attribute."""
+    for entry in initrwgt.entries:
+        if not isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
+            continue
+        if entry.name == group_name or entry.attributes.get("type") == group_name:
+            return entry
+    return None
+
+
+def _find_weight_location(initrwgt: pylhe.LHEInitRWGT, weight_id: str) -> str | None:
+    """Return where a weight ID already exists, if present."""
+    for entry in initrwgt.entries:
+        if isinstance(entry, pylhe.LHEInitRWGTWeight):
+            if entry.id == weight_id:
+                return "<initrwgt>"
+            continue
+
+        for weight in entry.weights:
+            if weight.id == weight_id:
+                group_name = entry.name or entry.attributes.get("type", "")
+                if group_name:
+                    return f"weight group '{group_name}'"
+                return "<initrwgt>"
+    return None
+
+
+def _add_initrwgt_weight(
+    lhefile: pylhe.LHEFile,
+    group_name: str,
+    weight_id: str,
+    weight_text: str,
+) -> str | None:
+    """Add a weight definition to the initrwgt header block."""
+    header = _ensure_header(lhefile)
+    existing_location = _find_weight_location(header.initrwgt, weight_id)
+    if existing_location is not None:
+        return f"Error: Weight ID '{weight_id}' already exists in {existing_location}"
+
+    group = _find_weight_group(header.initrwgt, group_name)
+    weight = pylhe.LHEInitRWGTWeight(
+        id=weight_id,
+        name=weight_text,
+    )
+
+    if group is None:
+        group = pylhe.LHEInitRWGTWeightGroup(
+            name=group_name,
+            weights=[],
+        )
+        header.initrwgt.entries.append(group)
+
+    group.weights.append(weight)
+    return None
+
+
+def _keep_only_weight_definition(
+    lhefile: pylhe.LHEFile,
+    only_weight_id: str,
+) -> None:
+    """Keep only the requested initrwgt weight definition."""
+    if lhefile.header is None:
+        return
+
+    kept_entries: list[pylhe.InitRWGTEntry] = []
+    for entry in lhefile.header.initrwgt.entries:
+        if isinstance(entry, pylhe.LHEInitRWGTWeight):
+            if entry.id == only_weight_id:
+                kept_entries.append(entry)
+            continue
+
+        kept_weights = [
+            weight for weight in entry.weights if weight.id == only_weight_id
+        ]
+        if kept_weights:
+            entry.weights = kept_weights
+            kept_entries.append(entry)
+
+    lhefile.header.initrwgt.entries = kept_entries
+
+
 def convert_lhe_file(
     input_file: str,
     output_file: str | None = None,
-    compress: bool = False,
-    rwgt: bool = True,
-    weights: bool = False,
+    output_format: pylhe.LHEOutputFormat | None = None,
     append_lhe_weight: tuple[str, str, str] | None = None,
     only_weight_id: str | None = None,
     add_initrwgt: list[tuple[str, str, str]] | None = None,
@@ -35,7 +129,7 @@ def convert_lhe_file(
     Args:
         input_file: Path to the input LHE file
         output_file: Path to the output LHE file (None for stdout)
-        compress: Whether to compress the output file
+        output_format: Output format preset to use when writing
         append_lhe_weight: Optional tuple containing LHE weight group name and weight ID to append LHE weight to each event
         only_weight_id: Optional weight ID to keep; all other weights will be removed
         add_initrwgt: Optional list of tuples containing LHE weight group name, weight ID, and weight text to add to the init-rwgt block
@@ -47,59 +141,36 @@ def convert_lhe_file(
         else:
             lhefile = pylhe.LHEFile.fromfile(input_file)
 
+        output_lhefile = pylhe.LHEFile(
+            init=lhefile.init,
+            header=deepcopy(lhefile.header),
+            comment=lhefile.comment,
+            version=lhefile.version,
+            extra_attributes=lhefile.extra_attributes.copy(),
+        )
+
         if add_initrwgt:
-            index = get_max_weight_index(lhefile.init)
             for group_name, weight_id, weight_text in add_initrwgt:
-                for wg in lhefile.init.weightgroup.values():
-                    if weight_id in wg.weights:
-                        return (
-                            1,
-                            f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
-                        )
-                if group_name not in lhefile.init.weightgroup:
-                    # create weight group
-                    lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
-                        attrib={"name": group_name}, weights={}
-                    )
-                if weight_id not in lhefile.init.weightgroup[group_name].weights:
-                    lhefile.init.weightgroup[group_name].weights[weight_id] = (
-                        pylhe.LHEWeightInfo(
-                            name=weight_text, attrib={"id": weight_id}, index=index + 1
-                        )
-                    )
+                error_message = _add_initrwgt_weight(
+                    output_lhefile,
+                    group_name,
+                    weight_id,
+                    weight_text,
+                )
+                if error_message is not None:
+                    return 1, error_message
         if append_lhe_weight is not None:
             group_name, weight_id, weight_text = append_lhe_weight
-            index = get_max_weight_index(lhefile.init)
-            for wg in lhefile.init.weightgroup.values():
-                if weight_id in wg.weights:
-                    return (
-                        1,
-                        f"Error: Weight ID '{weight_id}' already exists in group '{wg}'",
-                    )
-            if group_name not in lhefile.init.weightgroup:
-                # create weight group
-                lhefile.init.weightgroup[group_name] = pylhe.LHEWeightGroup(
-                    attrib={"name": group_name}, weights={}
-                )
-            if weight_id not in lhefile.init.weightgroup[group_name].weights:
-                lhefile.init.weightgroup[group_name].weights[weight_id] = (
-                    pylhe.LHEWeightInfo(
-                        name=weight_text, attrib={"id": weight_id}, index=index + 1
-                    )
-                )
+            error_message = _add_initrwgt_weight(
+                output_lhefile,
+                group_name,
+                weight_id,
+                weight_text,
+            )
+            if error_message is not None:
+                return 1, error_message
         if only_weight_id is not None:
-            # Remove all other weights from init block
-            for wg in lhefile.init.weightgroup.values():
-                if only_weight_id in wg.weights:
-                    wg.weights = {only_weight_id: wg.weights[only_weight_id]}
-                else:
-                    wg.weights = {}
-            # Remove empty weight groups
-            lhefile.init.weightgroup = {
-                name: wg
-                for name, wg in lhefile.init.weightgroup.items()
-                if len(wg.weights) > 0
-            }
+            _keep_only_weight_definition(output_lhefile, only_weight_id)
 
         # Event loop generator with modifications if needed
         def _generator() -> Iterable[pylhe.LHEEvent]:
@@ -120,55 +191,64 @@ def convert_lhe_file(
 
         # Write the output file
         if output_file is None:
-            if compress:
+            if output_format is None:
+                output_format = pylhe.DEFAULT_FORMAT
+            if (
+                not isinstance(output_format, pylhe.LHEXMLFormat)
+                or output_format.compress
+            ):
                 return (
                     1,
-                    f"Error: Compression option ignored when writing to stdout (use `lhe2lhe -i {input_file} | gzip`)",
+                    "Error: Stdout only supports uncompressed XML output formats",
                 )
-            pylhe.LHEFile(lhefile.init, _generator()).write(
+            output_lhefile.events = _generator()
+            output_lhefile.write(
                 sys.stdout,
-                rwgt=rwgt,
-                weights=weights,
+                lheformat=output_format,
             )
         else:
-            pylhe.LHEFile(lhefile.init, _generator()).tofile(
+            output_lhefile.events = _generator()
+            output_lhefile.tofile(
                 output_file,
-                gz=compress,
-                rwgt=rwgt,
-                weights=weights,
+                lheformat=output_format,
             )
 
     except FileNotFoundError:
         if input_file == "-":
             return 1, "Error: Unable to read from stdin"
         return 1, f"Error: Input file '{input_file}' not found"
-    except Exception as e:
-        source = "stdin" if input_file == "-" else f"input file '{input_file}'"
-        return 1, f"Error during conversion from {source}: {e}"
     return 0, "Conversion successful"
 
 
 def main() -> None:
     """Main CLI function."""
     parser = create_base_parser(
-        description="Convert LHE files with different compression and weight format options",
+        description="Convert LHE files with different output format presets",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   lhe2lhe -i input.lhe                                    # Convert to stdout
   lhe2lhe -i input.lhe -o output.lhe                     # Basic conversion
-  lhe2lhe -i input.lhe -o output.lhe.gz --compress       # Compress output
-  lhe2lhe -i input.lhe -o output.lhe --weight-format weights # Use weights format
-  lhe2lhe -i input.lhe.gz -o output.lhe --weight-format none   # Remove weights
-  lhe2lhe -i input.lhe -o output.lhe.gz -c -w rwgt       # Short options
+  lhe2lhe -i input.lhe -o output.lhe.gz --output-format gz      # Gzip-compressed XML output
+  lhe2lhe -i input.lhe -o output.lhe --output-format weights    # XML output with <weights> blocks
+  lhe2lhe -i input.lhe -o output.lhe --output-format no-weights # XML output without alternate weights
+  lhe2lhe -i input.lhe -o output.h5 --output-format hdf5        # HDF5/LHEH5 output
+  lhe2lhe -i input.lhe -o output.h5 --output-format hdf5-gz     # HDF5 with gzip-compressed datasets
   lhe2lhe -i input.lhe | gzip > output.lhe.gz            # Pipe to compress
   cat input.lhe | lhe2lhe                                 # Convert from stdin to stdout
   lhe2lhe < input.lhe > output.lhe                       # Redirect stdin/stdout
 
-Weight formats:
-  rwgt      - Include weights in 'rwgt' format (default)
-  init-rwgt - Include weights in 'init-rwgt' format (both rwgt and weights)
-  none      - Exclude all weights
+Output formats:
+  none        - None (Detect by suffix)
+  default     - pylhe.DEFAULT_FORMAT (default XML/RWGT output)
+  gz          - pylhe.GZ_FORMAT
+  rwgt        - pylhe.RWGT_FORMAT
+  weights     - pylhe.WEIGHTS_FORMAT
+  rwgt-gz     - pylhe.RWGT_GZ_FORMAT
+  weights-gz  - pylhe.WEIGHTS_GZ_FORMAT
+  no-weights  - pylhe.NO_WEIGHTS_FORMAT
+  hdf5        - pylhe.HDF5_FORMAT
+  hdf5-gz     - pylhe.HDF5_GZ_FORMAT
         """,
     )
 
@@ -177,20 +257,10 @@ Weight formats:
     )
     parser.add_argument("--output", "-o", help="Output LHE file (default: stdout)")
 
-    parser.add_argument(
-        "--compress",
-        "-c",
-        action=argparse.BooleanOptionalAction,
-        help="Compress the output file (ignored if output filename ends with .gz/.gzip)",
-        default=False,
-    )
-
-    parser.add_argument(
-        "--weight-format",
-        "-w",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
+    add_output_format_argument(
+        parser,
+        "--output-format",
+        help_text="Output format preset to use (default: none)",
     )
 
     parser.add_argument(
@@ -216,6 +286,8 @@ Weight formats:
 
     args = parser.parse_args()
 
+    output_format = parse_output_format(args.output_format)
+
     # Validate input file exists (skip validation for stdin)
     if args.input != "-":
         input_path = Path(args.input)
@@ -230,14 +302,12 @@ Weight formats:
 
     # Perform the conversion
     retcode, message = convert_lhe_file(
-        args.input,
-        args.output,
-        args.compress,
-        args.weight_format == "rwgt",
-        args.weight_format == "weights",
-        args.append_lhe_weight,
-        args.only_weight_id,
-        args.add_initrwgt,
+        input_file=args.input,
+        output_file=args.output,
+        output_format=output_format,
+        append_lhe_weight=args.append_lhe_weight,
+        only_weight_id=args.only_weight_id,
+        add_initrwgt=args.add_initrwgt,
     )
     if retcode != 0:
         print(message, file=sys.stderr)

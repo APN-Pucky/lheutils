@@ -26,7 +26,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -37,8 +36,8 @@ classifiers = [
 ]
 dependencies = [
     "xmlschema",
-    "pylhe>=1.0.0",
-    "pylhe<2.0.0",
+    "particle",
+    "pylhe>=2.0.0",
     "typing-extensions>=4.0.0",
 ]
 
@@ -101,6 +100,9 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lheutils"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.mypy]
 warn_unused_configs = true

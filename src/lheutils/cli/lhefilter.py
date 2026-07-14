@@ -10,11 +10,17 @@ particle PDG IDs (incoming/outgoing), and event numbers.
 import argparse
 import sys
 from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
 
 import pylhe
 
-from lheutils.cli.util import create_base_parser
+from lheutils.cli.util import (
+    add_weight_format_argument,
+    create_base_parser,
+    create_output_format,
+    parse_weight_format,
+)
 
 
 def matches_process_filter(
@@ -130,8 +136,7 @@ def matches_event_filter(
 
 def filter_lhe_file(
     input_file: str,
-    rwgt: bool,
-    weights: bool,
+    weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     output_file: str | None = None,
     process_ids: set[int] | None = None,
     exclude_process_ids: set[int] | None = None,
@@ -147,6 +152,8 @@ def filter_lhe_file(
     exclude_event_ranges: list[tuple[int, int]] | None = None,
     max_events: int | None = None,
     negative_weights: bool = False,
+    zero_weights: bool = False,
+    zero_weights_eps: float = 1e-12,
 ) -> None:
     """Filter an LHE file based on the given criteria."""
     # Read the input LHE file
@@ -177,6 +184,7 @@ def filter_lhe_file(
                     event_index, include_event_ranges, exclude_event_ranges
                 )
                 and (not negative_weights or event.eventinfo.weight >= 0)
+                and (not zero_weights or abs(event.eventinfo.weight) > zero_weights_eps)
             ):
                 if max_events is not None and event_count >= max_events:
                     break
@@ -184,14 +192,22 @@ def filter_lhe_file(
                 event_count += 1
 
     # Create filtered LHE file
-    filtered_lhefile = pylhe.LHEFile(init=lhefile.init, events=_generator())
+    filtered_lhefile = pylhe.LHEFile(
+        init=lhefile.init,
+        events=_generator(),
+        header=deepcopy(lhefile.header),
+        comment=lhefile.comment,
+        version=lhefile.version,
+        extra_attributes=lhefile.extra_attributes.copy(),
+    )
+    lheformat = create_output_format(weight_format)
 
     # Output the result
     if output_file:
-        filtered_lhefile.tofile(output_file, rwgt=rwgt, weights=weights)
+        filtered_lhefile.tofile(output_file, lheformat=lheformat)
     else:
         # Write to stdout
-        filtered_lhefile.write(sys.stdout, rwgt=rwgt, weights=weights)
+        filtered_lhefile.write(sys.stdout, lheformat=lheformat)
 
 
 def parse_int_list(value: str) -> set[int]:
@@ -401,13 +417,21 @@ Note: Multiple filters are combined with AND logic.
         action="store_true",
         help="Remove negative weight events from output",
     )
-
+    # Remove zero weight events
     parser.add_argument(
-        "--weight-format",
-        choices=["rwgt", "weights", "none"],
-        default="rwgt",
-        help="Weight format to use in output (default: rwgt)",
+        "--zero-weights",
+        action="store_true",
+        help="Remove zero weight events from output",
     )
+    # Epsilon for checking if weight is effectively zero
+    parser.add_argument(
+        "--zero-weights-eps",
+        type=float,
+        default=1e-12,
+        help="Epsilon for checking if weight is effectively zero (default: 1e-12)",
+    )
+
+    add_weight_format_argument(parser)
 
     args = parser.parse_args()
 
@@ -420,9 +444,8 @@ Note: Multiple filters are combined with AND logic.
 
     # Call the filtering function
     filter_lhe_file(
-        rwgt=args.weight_format == "rwgt",
-        weights=args.weight_format == "weights",
         input_file=args.input,
+        weight_format=parse_weight_format(args.weight_format),
         output_file=args.output,
         process_ids=args.process,
         exclude_process_ids=args.PROCESS,
@@ -438,6 +461,8 @@ Note: Multiple filters are combined with AND logic.
         exclude_event_ranges=args.EVENTS,
         max_events=args.max_events,
         negative_weights=args.negative_weights,
+        zero_weights=args.zero_weights,
+        zero_weights_eps=args.zero_weights_eps,
     )
 
 

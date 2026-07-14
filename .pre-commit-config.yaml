@@ -20,31 +20,34 @@ repos:
     - id: trailing-whitespace
 
 -   repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.2
     hooks:
     - id: codespell
       additional_dependencies:
         - tomli
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.14.3"
+    rev: "v0.15.19"
     hooks:
     - id: ruff-check
       args: ["--fix", "--show-fixes"]
     - id: ruff-format
 
 -   repo: https://github.com/PyCQA/flake8
-    rev: 7.1.1
+    rev: 7.3.0
     hooks:
     - id: flake8
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v2.1.0
     hooks:
     - id: mypy
       files: src
       args: [--show-error-codes]
-      additional_dependencies: [pylhe, xmlschema]
+      additional_dependencies:
+        - "pylhe @ git+https://github.com/scikit-hep/pylhe.git@lheh5_support"
+        - xmlschema
+        - particle
 
 - repo: https://github.com/pre-commit/pygrep-hooks
   rev: v1.10.0
