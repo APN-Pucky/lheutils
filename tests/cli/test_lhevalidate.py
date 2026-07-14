@@ -1,6 +1,5 @@
 import subprocess
 from pathlib import Path
-from shutil import copyfile
 
 import h5py
 import pytest
