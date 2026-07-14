@@ -111,7 +111,7 @@ def test_format_event_pretty_shows_none_for_missing_nplo_and_npnlo():
 
     output = _format_event_pretty(event)
     assert "XML attributes: None" in output
-    assert "Number of weights: 0" in output
+    assert "Weights: {}" in output
     assert "Scales: None" in output
 
 
@@ -148,5 +148,28 @@ def test_format_event_pretty_shows_scales():
     )
 
     output = _format_event_pretty(event)
-    assert "Number of weights: 0" in output
+    assert "Weights: {}" in output
     assert "Scales: fscale=544.374, rscale=544.374" in output
+
+
+def test_format_event_pretty_shows_weight_variations_on_separate_lines():
+    event = pylhe.LHEEvent(
+        eventinfo=pylhe.LHEEventInfo(
+            nparticles=0,
+            pid=1,
+            weight=1.0,
+            scale=2.0,
+            aqed=3.0,
+            aqcd=4.0,
+        ),
+        particles=[],
+        weights={"1000": 1.0, "1001": 1.25, "1002": 0.8},
+    )
+
+    output = _format_event_pretty(event)
+    assert (
+        "  Weights:\n"
+        "    '1000': 1 (central)\n"
+        "    '1001': 1.25 (+25%)\n"
+        "    '1002': 0.8 (-20%)"
+    ) in output

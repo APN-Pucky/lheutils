@@ -63,6 +63,26 @@ def _format_scales(scales: dict[str, float]) -> str:
     )
 
 
+def _format_weights(weights: dict[str, float]) -> str:
+    """Return formatted event weights with variations from the first weight."""
+    if not weights:
+        return "{}"
+
+    weight_items = list(weights.items())
+    _, central_weight = weight_items[0]
+    lines = [f"{weight_items[0][0]!r}: {_format_number(central_weight)} (central)"]
+
+    for key, value in weight_items[1:]:
+        if central_weight == 0:
+            variation = "undefined"
+        else:
+            percent_change = ((value - central_weight) / central_weight) * 100
+            variation = f"{percent_change:+.6g}%"
+        lines.append(f"{key!r}: {_format_number(value)} ({variation})")
+
+    return "\n".join(lines)
+
+
 def _format_event_pretty(event: pylhe.LHEEvent) -> str:
     """Return a human-readable summary of an event."""
     incoming = [
@@ -71,6 +91,15 @@ def _format_event_pretty(event: pylhe.LHEEvent) -> str:
     outgoing = [
         pdg_name(particle.id) for particle in event.particles if particle.status == 1
     ]
+
+    formatted_weights = _format_weights(event.weights)
+    if formatted_weights == "{}":
+        weight_lines = [f"  Weights: {formatted_weights}"]
+    else:
+        weight_lines = [
+            "  Weights:",
+            *(f"    {line}" for line in formatted_weights.splitlines()),
+        ]
 
     lines = [
         "Event Summary",
@@ -82,7 +111,7 @@ def _format_event_pretty(event: pylhe.LHEEvent) -> str:
         f"  XML attributes: {_format_extra_event_attributes(event.attributes)}",
         f"  Incoming PDG IDs: {incoming}",
         f"  Outgoing PDG IDs: {outgoing}",
-        f"  Number of weights: {len(event.weights)}",
+        *weight_lines,
         f"  Scales: {_format_scales(event.scales)}",
         f"  Comment: {event.optional}",
         "  Particles:",
