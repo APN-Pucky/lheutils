@@ -38,6 +38,8 @@ dependencies = [
     "xmlschema",
     "particle",
     "pylhe>=2.0.0",
+    # for now live git pyhepmc dependency, until it is released on PyPI
+    "pyhepmc @ git+https://github.com/scikit-hep/pyhepmc.git",
     "typing-extensions>=4.0.0",
 ]
 
@@ -67,6 +69,7 @@ Homepage = "https://github.com/APN-Pucky/lheutils"
 "Releases" = "https://github.com/APN-Pucky/lheutils/releases"
 
 [project.scripts]
+lhe2hepmc = "lheutils.cli.lhe2hepmc:main"
 lhecheck = "lheutils.cli.lhecheck:main"
 lhefilter = "lheutils.cli.lhefilter:main"
 lhefix = "lheutils.cli.lhefix:main"
@@ -79,6 +82,7 @@ lheunstack = "lheutils.cli.lheunstack:main"
 lhe2lhe = "lheutils.cli.lhe2lhe:main"
 lhediff = "lheutils.cli.lhediff:main"
 lhevalidate = "lheutils.cli.lhevalidate:main"
+hepmc2lhe = "lheutils.cli.hepmc2lhe:main"
 
 [tool.hatch.version]
 source = "vcs"
@@ -107,7 +111,7 @@ allow-direct-references = true
 [tool.mypy]
 warn_unused_configs = true
 warn_unused_ignores = true
-python_version = "3.10"
+python_version = "3.12"
 files = "src"
 strict = true
 warn_unreachable = true

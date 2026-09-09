@@ -155,7 +155,7 @@ def add_output_format_argument(
 
 def parse_output_format(
     output_format: str | pylhe.LHEOutputFormat,
-) -> pylhe.LHEOutputFormat:
+) -> pylhe.LHEOutputFormat | None:
     """Normalize a CLI output-format value to the corresponding pylhe preset."""
     if isinstance(output_format, (pylhe.LHEXMLFormat, pylhe.LHEHDF5Format)):
         return output_format
