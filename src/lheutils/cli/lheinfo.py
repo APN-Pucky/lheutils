@@ -146,7 +146,7 @@ class LHEInfo:
     beamB: int
     energyB: float
     pdfB: int
-    weight_groups: dict[str, int]
+    weight_groups: dict[str, list[pylhe.LHEInitRWGTWeight]]
     num_events: int
     negative_weighted_events: int
     zero_weighted_events: int
@@ -178,8 +178,10 @@ class LHEInfo:
         # Weight groups
         if self.weight_groups:
             print("  Weight Groups:")
-            for name, count in self.weight_groups.items():
-                print(f"    {name}: {count} weights")
+            for name, weights in self.weight_groups.items():
+                print(f"    {name}: {len(weights)} weights")
+                for index, weight in enumerate(weights, start=1):
+                    print(f"      {index}: id={weight.id} name={weight.name}")
         # Number of events
         print(
             f"Number of events: {self.num_events} (negative: {self.negative_weighted_events_ratio:.2%}, zero: {self.zero_weighted_events_ratio:.2%})"
@@ -229,25 +231,27 @@ class LHEInfo:
         )
 
 
-def get_weight_groups(lhefile: pylhe.LHEFile) -> dict[str, int]:
-    """Collect initrwgt weight-group counts, with a bucket for direct weights."""
+def get_weight_groups(
+    lhefile: pylhe.LHEFile,
+) -> dict[str, list[pylhe.LHEInitRWGTWeight]]:
+    """Collect initrwgt weights by group, with a bucket for direct weights."""
     if lhefile.header is None:
         return {}
 
-    weight_groups: dict[str, int] = {}
-    direct_weight_count = 0
+    weight_groups: dict[str, list[pylhe.LHEInitRWGTWeight]] = {}
+    direct_weights: list[pylhe.LHEInitRWGTWeight] = []
 
     for index, entry in enumerate(lhefile.header.initrwgt.entries, start=1):
         if isinstance(entry, pylhe.LHEInitRWGTWeightGroup):
             group_name = (
                 entry.name or entry.attributes.get("type") or f"weight_group_{index}"
             )
-            weight_groups[group_name] = len(entry.weights)
+            weight_groups[group_name] = entry.weights
         else:
-            direct_weight_count += 1
+            direct_weights.append(entry)
 
-    if direct_weight_count:
-        weight_groups["<initrwgt>"] = direct_weight_count
+    if direct_weights:
+        weight_groups["<initrwgt>"] = direct_weights
 
     return weight_groups
 

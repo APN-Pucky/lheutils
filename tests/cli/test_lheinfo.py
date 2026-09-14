@@ -8,7 +8,22 @@ from lheutils.cli.lheinfo import get_lheinfo
 def test_get_lheinfo_reports_initrwgt_weight_groups():
     info = get_lheinfo(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
 
-    assert info.weight_groups == {"scale_variation": 9}
+    assert len(info.weight_groups["scale_variation"]) == 9
+    assert info.weight_groups["scale_variation"][0].id == "1001"
+    assert (
+        info.weight_groups["scale_variation"][0].name
+        == "muR=0.10000E+01 muF=0.10000E+01"
+    )
+
+
+def test_lheinfo_prints_initrwgt_weights(capsys):
+    info = get_lheinfo(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
+
+    info.print()
+    output = capsys.readouterr().out
+
+    assert "    scale_variation: 9 weights" in output
+    assert "      1: id=1001 name=muR=0.10000E+01 muF=0.10000E+01" in output
 
 
 def test_get_lheinfo_reports_no_weight_groups_for_unweighted_file():

@@ -63,21 +63,17 @@ def _format_scales(scales: dict[str, float]) -> str:
     )
 
 
-def _format_weights(weights: dict[str, float]) -> str:
+def _format_weights(weights: dict[str, float], central_weight: float) -> str:
     """Return formatted event weights with variations from the first weight."""
     if not weights:
         return "{}"
 
     weight_items = list(weights.items())
-    _, central_weight = weight_items[0]
-    lines = [f"{weight_items[0][0]!r}: {_format_number(central_weight)} (central)"]
+    lines = []
 
-    for key, value in weight_items[1:]:
-        if central_weight == 0:
-            variation = "undefined"
-        else:
-            percent_change = ((value - central_weight) / central_weight) * 100
-            variation = f"{percent_change:+.6g}%"
+    for key, value in weight_items:
+        percent_change = ((value - central_weight) / central_weight) * 100
+        variation = f"{percent_change:+.6g}%"
         lines.append(f"{key!r}: {_format_number(value)} ({variation})")
 
     return "\n".join(lines)
@@ -92,12 +88,12 @@ def _format_event_pretty(event: pylhe.LHEEvent) -> str:
         pdg_name(particle.id) for particle in event.particles if particle.status == 1
     ]
 
-    formatted_weights = _format_weights(event.weights)
+    formatted_weights = _format_weights(event.weights, event.eventinfo.weight)
     if formatted_weights == "{}":
-        weight_lines = [f"  Weights: {formatted_weights}"]
+        weight_lines = [f"  initrwgt: {formatted_weights}"]
     else:
         weight_lines = [
-            "  Weights:",
+            "  initrwgt:",
             *(f"    {line}" for line in formatted_weights.splitlines()),
         ]
 
@@ -105,13 +101,13 @@ def _format_event_pretty(event: pylhe.LHEEvent) -> str:
         "Event Summary",
         f"  Process ID: {event.eventinfo.pid}",
         f"  Central weight: {_format_number(event.eventinfo.weight)}",
+        *weight_lines,
         f"  Scale: {_format_number(event.eventinfo.scale)}",
         f"  alpha_QED: {_format_number(event.eventinfo.aqed)}",
         f"  alpha_QCD: {_format_number(event.eventinfo.aqcd)}",
         f"  XML attributes: {_format_extra_event_attributes(event.attributes)}",
         f"  Incoming PDG IDs: {incoming}",
         f"  Outgoing PDG IDs: {outgoing}",
-        *weight_lines,
         f"  Scales: {_format_scales(event.scales)}",
         f"  Comment: {event.optional}",
         "  Particles:",
