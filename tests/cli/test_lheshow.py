@@ -111,7 +111,7 @@ def test_format_event_pretty_shows_none_for_missing_nplo_and_npnlo():
 
     output = _format_event_pretty(event)
     assert "XML attributes: None" in output
-    assert "Weights: {}" in output
+    assert "initrwgt: {}" in output
     assert "Scales: None" in output
 
 
@@ -148,7 +148,7 @@ def test_format_event_pretty_shows_scales():
     )
 
     output = _format_event_pretty(event)
-    assert "Weights: {}" in output
+    assert "initrwgt: {}" in output
     assert "Scales: fscale=544.374, rscale=544.374" in output
 
 
@@ -168,8 +168,8 @@ def test_format_event_pretty_shows_weight_variations_on_separate_lines():
 
     output = _format_event_pretty(event)
     assert (
-        "  Weights:\n"
-        "    '1000': 1 (central)\n"
+        "  initrwgt:\n"
+        "    '1000': 1 (+0%)\n"
         "    '1001': 1.25 (+25%)\n"
         "    '1002': 0.8 (-20%)"
     ) in output
