@@ -19,6 +19,7 @@ pip install lheutils
 | `lhefix` | Fix common issues in LHE files. |
 | `lheinfo` | Display information about LHE files. |
 | `lhemerge` | Merge LHE files with identical initialization sections (inverse of `lhesplit`). |
+| `lhereplaceid` | Replace particle PDG IDs in LHE files, e.g. to relabel taus as muons. |
 | `lheshow` | Display specific events or init block from LHE files. |
 | `lhesplit` | Split LHE events from input file into multiple output files. |
 | `lhestack` | Stack multiple LHE files into a single file.  |
