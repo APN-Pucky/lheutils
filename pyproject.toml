@@ -39,7 +39,7 @@ dependencies = [
     "particle",
     "pylhe>=2.0.0",
     # for now live git pyhepmc dependency, until it is released on PyPI
-    "pyhepmc @ git+https://github.com/scikit-hep/pyhepmc.git",
+    "pyhepmc", # needs to be above 2.16.1
     "typing-extensions>=4.0.0",
 ]
 
