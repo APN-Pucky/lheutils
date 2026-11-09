@@ -51,6 +51,11 @@ def replace_ids(event: pylhe.LHEEvent, id_map: dict[int, int]) -> pylhe.LHEEvent
     return event
 
 
+def _is_gzip_path(path: str) -> bool:
+    """Check whether a path's extension indicates gzip compression."""
+    return path.lower().endswith((".gz", ".gzip"))
+
+
 def replace_ids_in_file(
     input_file: str,
     id_map: dict[int, int],
@@ -63,6 +68,10 @@ def replace_ids_in_file(
     the file is replaced in place: the result is written to a temporary file
     in the same directory and then atomically renamed over the original, so
     a failure midway never leaves the original file corrupted.
+
+    The destination (output_file, or input_file for in-place edits) is
+    gzip-compressed when its name ends in '.gz'/'.gzip', matching its
+    extension rather than silently writing plain XML under a '.gz' name.
     """
     if input_file == "-":
         lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
@@ -81,15 +90,21 @@ def replace_ids_in_file(
         version=lhefile.version,
         extra_attributes=lhefile.extra_attributes.copy(),
     )
-    lheformat = create_output_format(weight_format)
 
     if output_file:
+        lheformat = create_output_format(
+            weight_format, compress=_is_gzip_path(output_file)
+        )
         output_lhefile.tofile(output_file, lheformat=lheformat)
     elif input_file == "-":
+        lheformat = create_output_format(weight_format)
         output_lhefile.write(sys.stdout, lheformat=lheformat)
     else:
         # In-place: write to a temp file in the same directory, then
         # atomically replace the original.
+        lheformat = create_output_format(
+            weight_format, compress=_is_gzip_path(input_file)
+        )
         input_path = Path(input_file)
         temp_fd, temp_path = tempfile.mkstemp(
             suffix=".tmp" + input_path.suffix,
