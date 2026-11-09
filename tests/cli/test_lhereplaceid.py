@@ -1,9 +1,16 @@
+import sys
 from pathlib import Path
 
 import pylhe
+import pytest
 import skhep_testdata
 
-from lheutils.cli.lhereplaceid import parse_id_map, replace_ids, replace_ids_in_file
+from lheutils.cli.lhereplaceid import (
+    main,
+    parse_id_map,
+    replace_ids,
+    replace_ids_in_file,
+)
 
 
 def test_parse_id_map():
@@ -97,6 +104,44 @@ def test_replace_ids_in_file_edits_in_place_when_no_output_given(tmp_path):
     result_ids = [p.id for event in result.events for p in event.particles]
     assert 6 not in result_ids
     assert result_ids.count(999) == original_ids.count(6)
+
+
+def test_main_edits_multiple_files_in_place(tmp_path, monkeypatch):
+    source = Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text(
+        encoding="utf-8"
+    )
+    file1 = tmp_path / "a.lhe"
+    file2 = tmp_path / "b.lhe"
+    file1.write_text(source, encoding="utf-8")
+    file2.write_text(source, encoding="utf-8")
+
+    monkeypatch.setattr(sys, "argv", ["lhereplaceid", str(file1), str(file2), "6->999"])
+    main()
+
+    for f in (file1, file2):
+        result = pylhe.LHEFile.fromfile(f)
+        result_ids = [p.id for event in result.events for p in event.particles]
+        assert 6 not in result_ids
+        assert 999 in result_ids
+
+
+def test_main_rejects_output_with_multiple_files(tmp_path, monkeypatch, capsys):
+    file1 = tmp_path / "a.lhe"
+    file2 = tmp_path / "b.lhe"
+    file1.write_text("", encoding="utf-8")
+    file2.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["lhereplaceid", str(file1), str(file2), "6->999", "-o", "out.lhe"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 2
+
+    assert "single input file" in capsys.readouterr().err
 
 
 def test_replace_ids_in_file_swap_is_simultaneous(tmp_path):

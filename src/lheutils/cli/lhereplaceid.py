@@ -111,9 +111,10 @@ def main() -> None:
     """Main entry point for lhereplaceid CLI."""
     parser = create_base_parser(
         prog="lhereplaceid",
-        description="Replace particle PDG IDs in an LHE file, e.g. to relabel "
-        "taus as muons.",
+        description="Replace particle PDG IDs in one or more LHE files, e.g. "
+        "to relabel taus as muons.",
         epilog="Example: lhereplaceid input.lhe '15->13' '-15->-13'   (edits input.lhe in place)\n"
+        "         lhereplaceid *.lhe '15->13' '-15->-13'               (edits each file in place)\n"
         "         lhereplaceid input.lhe '15->13' '-15->-13' -o output.lhe\n"
         "         cat input.lhe | lhereplaceid - '15->13' '-15->-13'\n"
         "Note: quote each mapping (e.g. '15->13') so the shell does not "
@@ -121,38 +122,58 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    parser.add_argument("input", help="Input LHE file, or '-' to read from stdin")
+    parser.add_argument(
+        "args",
+        nargs="+",
+        metavar="FILE|FROM->TO",
+        help="Input LHE file(s) (or '-' for stdin) and PDG ID mapping(s), "
+        "e.g. 15->13 -15->-13, in any order. Mappings are recognized by "
+        "containing '->'; everything else is treated as a file. Multiple "
+        "mappings are applied simultaneously (so swaps like 13->15 15->13 "
+        "work as expected).",
+    )
     parser.add_argument(
         "-o",
         "--output",
-        help="Output file. Default: edit the input file in place (ignored "
-        "for stdin, which writes to stdout).",
-    )
-    parser.add_argument(
-        "mappings",
-        nargs="+",
-        metavar="FROM->TO",
-        help="PDG ID mapping(s) to apply, e.g. 15->13 -15->-13. Repeatable "
-        "for multiple mappings, including swaps (e.g. 13->15 15->13), which "
-        "are applied simultaneously.",
+        help="Output file (only valid with a single input file). Default: "
+        "edit the input file(s) in place (ignored for stdin, which writes "
+        "to stdout).",
     )
 
     add_weight_format_argument(parser)
 
     args = parser.parse_args()
 
-    if args.input != "-" and not Path(args.input).exists():
-        print(f"Error: Input file '{args.input}' does not exist", file=sys.stderr)
-        sys.exit(1)
+    mappings = [a for a in args.args if "->" in a]
+    files = [a for a in args.args if "->" not in a]
 
-    id_map = parse_id_map(args.mappings)
+    if not mappings:
+        parser.error("at least one FROM->TO mapping is required")
+    if not files:
+        files = ["-"]
+    if args.output and len(files) > 1:
+        parser.error("-o/--output can only be used with a single input file")
 
-    replace_ids_in_file(
-        input_file=args.input,
-        id_map=id_map,
-        weight_format=parse_weight_format(args.weight_format),
-        output_file=args.output,
-    )
+    id_map = parse_id_map(mappings)
+    weight_format = parse_weight_format(args.weight_format)
+
+    for filepath in files:
+        if filepath != "-" and not Path(filepath).exists():
+            print(f"Error: Input file '{filepath}' does not exist", file=sys.stderr)
+            continue
+        try:
+            replace_ids_in_file(
+                input_file=filepath,
+                id_map=id_map,
+                weight_format=weight_format,
+                output_file=args.output,
+            )
+        except Exception as e:
+            print(f"Error processing {filepath}: {e}", file=sys.stderr)
+            continue
+        if filepath != "-":
+            destination = args.output or filepath
+            print(f"{filepath}: replaced ids -> {destination}")
 
 
 if __name__ == "__main__":
