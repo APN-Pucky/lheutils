@@ -7,7 +7,9 @@ calculation was done with taus that are meant to represent muons.
 """
 
 import argparse
+import os
 import sys
+import tempfile
 from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
@@ -55,7 +57,13 @@ def replace_ids_in_file(
     weight_format: pylhe.LHEWeightFormat = pylhe.LHEWeightFormat.RWGT,
     output_file: str | None = None,
 ) -> None:
-    """Replace particle PDG IDs throughout an LHE file."""
+    """Replace particle PDG IDs throughout an LHE file.
+
+    If no output_file is given and input_file is a real file (not stdin),
+    the file is replaced in place: the result is written to a temporary file
+    in the same directory and then atomically renamed over the original, so
+    a failure midway never leaves the original file corrupted.
+    """
     if input_file == "-":
         lhefile = pylhe.LHEFile.frombuffer(sys.stdin)
     else:
@@ -77,8 +85,26 @@ def replace_ids_in_file(
 
     if output_file:
         output_lhefile.tofile(output_file, lheformat=lheformat)
-    else:
+    elif input_file == "-":
         output_lhefile.write(sys.stdout, lheformat=lheformat)
+    else:
+        # In-place: write to a temp file in the same directory, then
+        # atomically replace the original.
+        input_path = Path(input_file)
+        temp_fd, temp_path = tempfile.mkstemp(
+            suffix=".tmp" + input_path.suffix,
+            prefix=input_path.stem + "_",
+            dir=input_path.parent,
+        )
+        try:
+            os.close(temp_fd)
+            os.chmod(temp_path, os.stat(input_file).st_mode)
+            output_lhefile.tofile(temp_path, lheformat=lheformat)
+            os.replace(temp_path, input_file)
+        except Exception:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise
 
 
 def main() -> None:
@@ -87,7 +113,8 @@ def main() -> None:
         prog="lhereplaceid",
         description="Replace particle PDG IDs in an LHE file, e.g. to relabel "
         "taus as muons.",
-        epilog="Example: lhereplaceid input.lhe '15->13' '-15->-13' -o output.lhe\n"
+        epilog="Example: lhereplaceid input.lhe '15->13' '-15->-13'   (edits input.lhe in place)\n"
+        "         lhereplaceid input.lhe '15->13' '-15->-13' -o output.lhe\n"
         "         cat input.lhe | lhereplaceid - '15->13' '-15->-13'\n"
         "Note: quote each mapping (e.g. '15->13') so the shell does not "
         "interpret '->' as output redirection.",
@@ -95,7 +122,12 @@ def main() -> None:
     )
 
     parser.add_argument("input", help="Input LHE file, or '-' to read from stdin")
-    parser.add_argument("-o", "--output", help="Output file (default: write to stdout)")
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file. Default: edit the input file in place (ignored "
+        "for stdin, which writes to stdout).",
+    )
     parser.add_argument(
         "mappings",
         nargs="+",

@@ -74,6 +74,31 @@ def test_replace_ids_in_file_remaps_particle_ids(tmp_path):
     assert result_ids.count(999) == original_ids.count(6)
 
 
+def test_replace_ids_in_file_edits_in_place_when_no_output_given(tmp_path):
+    input_file = tmp_path / "input.lhe"
+    input_file.write_text(
+        Path(skhep_testdata.data_path("pylhe-testlhef3.lhe")).read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+
+    original = pylhe.LHEFile.fromfile(input_file)
+    original_ids = [p.id for event in original.events for p in event.particles]
+    assert 6 in original_ids
+
+    replace_ids_in_file(
+        input_file=str(input_file),
+        id_map={6: 999},
+    )
+
+    assert input_file.exists()
+    result = pylhe.LHEFile.fromfile(input_file)
+    result_ids = [p.id for event in result.events for p in event.particles]
+    assert 6 not in result_ids
+    assert result_ids.count(999) == original_ids.count(6)
+
+
 def test_replace_ids_in_file_swap_is_simultaneous(tmp_path):
     input_file = Path(skhep_testdata.data_path("pylhe-testlhef3.lhe"))
     output_file = tmp_path / "output.lhe"
